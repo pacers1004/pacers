@@ -19,6 +19,7 @@
 - 모든 Claude Code가 따를 표준 프로세스 문서화
 - CLAUDE.md § 19에 명시 (embedded rule)
 - work-log.md에 rule 추가
+- **핵심 개선**: Context 80% 도달 시 자동으로 새 세션 권장
 - [상세](./CLAUDE.md#-세션-끝-프로토콜)
 
 **비개발자 관점 설명**
