@@ -1,0 +1,789 @@
+# PACERS 프로젝트 마스터 문서
+
+## 1. 프로젝트 정체성
+- **서비스명**: 페이서스(Pacers) — 러닝메이트 매칭 및 소셜 러닝 플랫폼
+- **핵심 철학**: "멀리, 빨리 뛰는 법보다 오늘도 운동화를 다시 신는 법을 제안합니다."
+- **현재**: 국내 버블앱 순위 19위, 유저 900명 라이브 서비스
+- **목표**: 국내 1위 → 세계 1위 러닝 플랫폼
+- **경쟁 앱**: 나이키런클럽, 스트라바
+- **역할**: 너는 페이서스의 수석 개발자다. 페이서스의 성공을 위해 창의적으로 사고하고 능동적으로 제안해라.
+
+---
+
+## 2. 기능 파이프라인 (Features Pipeline)
+
+| # | 기능명 | 로컬 디렉토리 | GitHub | 배포 | 상태 |
+|---|--------|--------------|--------|------|------|
+| 01 | Today Weather (날씨 위젯) | `~/weather-app` | `pacers1004/weather-app` | Vercel | ✅ 라이브 |
+| 02 | Cooldown Auto Post (쿨다운 자동 게시) | `~/cooldown-scheduler` | `pacers1004/cooldown-scheduler` | GitHub Actions | ✅ 라이브 |
+| 03 | Daily Pacer 매칭 스코어 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ✅ 라이브 |
+
+### 네이밍 컨벤션
+- **로컬**: `~/[feature-slug]/`
+- **GitHub**: `pacers1004/[feature-slug]`
+- **배포 선택 기준**:
+  - UI 있는 웹앱 → Vercel
+  - 스케줄러/트리거 → GitHub Actions (무료)
+  - 실시간 서버 필요 → Railway
+
+---
+
+## 3. 기술 스택
+- **메인**: Bubble.io (Web) + BDK Native (앱스토어 배포)
+- **구조**: SPA 기반 하이브리드 아키텍처
+- **커스텀 기능**: HTML/JS/CSS 미니 웹앱 → Vercel 배포 → 버블 HTML 엘리먼트에 iframe 삽입
+- **배포**: git push origin main → GitHub → Vercel/GitHub Actions 자동 배포
+- **API KEY**: 환경변수 사용 (절대 하드코딩 금지)
+
+---
+
+## 4. 개발 원칙
+- 파일 수정 시 최소한만 변경, 불필요한 파일 읽기 금지
+- UI/UX는 러너 관점에서 판단
+- 미니멀리즘 유지 — 러닝 본질에 집중
+- 버블 DB와 iframe 간 데이터 무결성 최우선
+- 단순 지시 이행이 아닌 리텐션/수익 구조 능동적 제안
+- 버블 워크로드 폭탄 요금 방지 — 리소스 효율적으로 사용
+- UI/디자인/색상 건드리지 말 것 (명시적 요청 없으면)
+
+### ⚠️ 필수: 에러 노출 방지 원칙 (Failsafe First)
+버블에 iframe/HTML 엘리먼트로 미니앱을 삽입할 때 **에러 화면이 유저에게 그대로 노출되는 상황은 절대 허용하지 않는다.**
+
+**에러 레벨 2가 반드시 존재한다:**
+- 에러 레벨 1: 미니앱 로드 성공 → 내부 API 실패 → 미니앱 자체 retry/fallback으로 처리
+- 에러 레벨 2: 미니앱(HTML 파일) 자체를 못 가져옴 → Android WebView가 에러 페이지 노출 → 미니앱 JS 코드 전혀 실행 안 됨
+
+**모든 iframe 삽입 시 필수 구현 패턴:**
+```html
+<!-- 1. Bubble HTML 엘리먼트에 로딩 오버레이 + iframe id 부여 -->
+<div id="wrap" style="position:relative;">
+  <div id="loading-overlay" style="position:absolute;inset:0;background:#000;z-index:10;
+       display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:5px;">
+    <div style="width:22px;height:22px;border:2.5px solid rgba(255,255,255,0.12);
+         border-top-color:#3764f1;border-radius:50%;animation:sp 0.8s linear infinite;margin-bottom:10px;"></div>
+    <style>@keyframes sp{to{transform:rotate(360deg)}}</style>
+    <span style="color:rgba(255,255,255,0.45);font-size:0.8rem;">로딩 중…</span>
+  </div>
+  <iframe id="mini-frame" src="[미니앱 URL]" style="width:100%;height:100%;border:none;"></iframe>
+</div>
+<script>
+(function() {
+  var loaded = false, retries = 0, MAX = 3, TIMEOUT = 5000;
+  window.addEventListener('message', function(e) {
+    // 미니앱이 로드 성공 시 postMessage({ type: '[앱명]_loaded' }) 전송해야 함
+    if (e.data && e.data.type === '[앱명]_loaded') {
+      loaded = true;
+      document.getElementById('loading-overlay').style.display = 'none';
+    }
+  });
+  function retry() {
+    if (loaded || retries >= MAX) return;
+    retries++;
+    var f = document.getElementById('mini-frame');
+    var src = f.getAttribute('src');
+    f.setAttribute('src', '');
+    setTimeout(function() { f.setAttribute('src', src); }, 300);
+    if (retries < MAX) setTimeout(retry, TIMEOUT);
+  }
+  setTimeout(retry, TIMEOUT);
+})();
+</script>
+
+<!-- 2. 미니앱(HTML) 내부에서 로드 성공 시 반드시 신호 전송 -->
+<script>
+  window.parent.postMessage({ type: '[앱명]_loaded' }, '*');
+</script>
+```
+
+**규칙 요약:**
+- 모든 iframe 미니앱은 로드 성공 시 `postMessage({ type: '[앱명]_loaded' })`를 반드시 전송
+- 버블 HTML 엘리먼트는 항상 로딩 오버레이 + 5초 타임아웃 재시도(최대 3회) 포함
+- 재시도 3회 후에도 실패 시 오버레이 유지 (에러 페이지 노출보다 로딩 상태가 낫다)
+- Vercel 배포 시 HTML 파일은 `stale-if-error` CDN 캐시 필수 (`vercel.json` 참고)
+
+---
+
+## 5. 디자인 시스템
+
+### 기본
+- **컬러**: 블랙/화이트 베이스, 포인트 컬러 `#3764F1`
+- **폰트**: Noto Sans KR (한글), Noto Serif (영문)
+- **톤**: 다크 배경, 미니멀, 불필요한 장식 없음
+
+### 스크린샷 레퍼런스
+- **저장 위치**: `~/pacers/screenshots/`
+- 앱 UI, 인스타그램 게시물, 디자인 레퍼런스 등 이미지를 여기에 저장하면 작업 시 참고 가능
+- 파일명 예시: `home_screen.png`, `instagram_01.png`, `nrc_reference.png`
+
+### 나이키런클럽 레퍼런스 (핵심 디자인 원칙)
+페이서스의 모든 UI는 나이키런클럽의 다음 원칙을 따른다:
+
+- **숫자가 곧 디자인**: 핵심 지표(거리, 페이스, 시간)를 극도로 크고 굵은 폰트로 hero 요소로 배치. 숫자 자체가 레이아웃의 중심
+- **라벨은 작게, 아래에**: 숫자 아래 작은 회색 텍스트로 단위/라벨 표기. 라벨이 숫자를 압도하지 않음
+- **정보 계층 명확화**: 1차 지표(크게) → 2차 지표(그리드, 작게) → 지도/부가정보 순서
+- **2~3열 그리드**: 보조 지표들은 균일한 그리드로 배치
+- **여백**: 각 섹션 사이 충분한 여백 — 빽빽하게 채우지 않음
+- **장식 없음**: 아이콘, 일러스트, 그래픽 최소화. 데이터만 남김
+- **다크모드**: 순수 블랙 배경 + 순수 화이트 텍스트 (워치 UI 기준)
+- **라이트모드**: 순수 화이트 배경 + 블랙 텍스트 (앱 상세 화면 기준)
+
+---
+
+## 6. 버블 앱 인프라
+
+### 도메인
+- **커스텀 도메인**: `pacers.kr`
+- **Bubble 원본 도메인**: `pacers-1004.bubbleapps.io`
+- **Workflow API**: `https://pacers.kr/version-test/api/1.1/wf`
+
+### Privacy & Security
+- **Data API**: 비활성화
+- **Workflow API**: 활성화
+- **X-Frame-Options**: Block all frames (날씨 위젯과 무관 — weather-app은 별도 도메인)
+
+### SEO
+- **GA4**: G-M5JGLNFC7G
+- **sitemap**: `https://pacers.kr/sitemap.xml`
+
+### BDK Native (iOS/Android)
+- **버전**: 2.45.0
+- **App Store ID**: 6754361646
+- **Bundle IDs**: com.pacers.* (iOS), com.pacer.* (Android)
+- **Push 알림**: OneSignal 연동
+- **딥링크**: ChottuLink 연동 (Firebase Dynamic Links 무료 대안)
+
+### ChottuLink 딥링크 설정
+- **활성화 여부**: ✅ Enable ChottuLink Deeplink Integration = Yes
+- **서브도메인**: `pacers.chottu.link`
+- **Mobile SDK Key**: `c_app_EPZ8ZikKezTni5IsHg1lh5e2aOIAGHqV`
+- **동작 원리**: `pacers.chottu.link` 링크 탭 → 앱 설치 시 앱 내 해당 URL로 이동 / 미설치 시 앱스토어로 이동
+
+#### 딥링크 사용처별 구분
+| 상황 | 사용 방법 |
+|------|----------|
+| OneSignal 푸시 알림 | `https://pacers.kr/01_main?tab=...` 직접 사용 (BDK 웹뷰가 처리) |
+| 소셜 공유 / 외부 링크 | `pacers.chottu.link` URL 사용 (앱 미설치 케이스 처리됨) |
+| 이메일 / SMS 마케팅 | `pacers.chottu.link` URL 사용 권장 |
+
+### 앱 URL 구조 (SPA) — 푸시 딥링크 핵심
+페이서스는 `01_main` **단일 페이지 SPA** 구조다. 버블 Web Pages에 여러 페이지가 있지만 실제 앱은 `01_main` 하나만 사용한다. 탭 이동/상세 진입 시 페이지 로드 없이 `?tab=` 파라미터만 바뀐다. 버블 내부에서는 각 탭 그룹(`01_Home_tab`, `04_Chatting_tab` 등)의 Conditional로 `01_main's current_tab is [값]` 조건으로 노출을 제어한다.
+
+| 화면 | URL (`pacers.kr` 기준) |
+|------|-----|
+| 홈 | `/01_main?tab=home` |
+| 쿨다운 목록 | `/01_main?tab=cooldown` |
+| 쿨다운 상세 | `/01_main?tab=cooldown_detail&cd_id=[post_unique_id]` |
+| 마라톤 동행 신청 | `/01_main?tab=마라톤 동행` |
+
+> 그 외 탭(마라톤/크루/채팅/마이 등)도 동일 패턴 — 버블 `Go to page 01_main` 액션의 `tab` 파라미터 값 확인 필요.
+
+### OneSignal 푸시 Launch URL 규칙 ⚠️
+- **Launch URL 비워두기** → BDK 앱 정상 실행, 마지막 화면 또는 홈으로 이동 ✅ (일반 알림용)
+- **`https://pacers.kr` 단독 입력 절대 금지** → BDK 앱이 아닌 별도 웹브라우저가 열림 ❌
+- **딥링크 시** → `/01_main?tab=[탭값]` 형태로 전체 URL 사용 ✅
+
+**이유**: BDK Native는 URL을 받아 앱 내 웹뷰로 열거나 딥링크로 처리한다. `pacers.kr` 루트만 넘기면 앱이 아닌 외부 브라우저에서 웹페이지가 열린다.
+
+**쿨다운 댓글 알림 딥링크 예시** (버블 워크플로우에서 동적 생성):
+```
+https://pacers.kr/01_main?tab=cooldown_detail&cd_id=[Trigger CooldownPost's unique id]
+```
+이 URL을 OneSignal 푸시의 Launch URL에 설정하면 알림 탭 시 해당 게시글로 바로 이동.
+
+---
+
+## 7. 버블 데이터 구조
+
+### User 테이블
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `tickets` | number | 매칭 티켓 보유 수 |
+| `today_cards` | List of Users | 당일 추천 카드 목록 |
+| `signup_completed` | yes/no | 온보딩 완료 여부 |
+| `home_address` | geographic | 위치 기반 기능용 |
+| `1:1 matched_users` | List of Users | 매칭된 유저 목록 |
+| `badges` | BadgeType | 보유 뱃지 |
+| `chat_rooms` | List of ChatRooms | 참여 채팅방 |
+
+### 전체 데이터 타입 목록
+**소셜/커뮤니티**: `Cooldown_post`, `CooldownComment`, `CooldownAnonIdentity`, `Chatmessage`, `ChatRoom`
+
+**러닝 활동**: `DailyRunningLog`, `DailyCrew`, `DailyCrewInvite`, `Daily_quest`, `Daily_weather`
+
+**오픈런**: `OpenRun_Course`, `OpenRun_Entry`, `OpenRun_Group`, `OpenRun_Ticket_History`
+
+**마라톤**: `마라톤 대회`, `마라톤 댓글`, `마라톤 동행 신청`
+
+**챌린지/배지**: `PacersChallenge`, `ChallengeCard`, `Badge`, `UserQuest`
+
+**시스템**: `Notification`, `Device`, `Purchase Attempt`, `System`, `Popup`, `Report`
+
+---
+
+## 8. 버블 ↔ iframe 데이터 연동
+
+### 데이터 흐름
+- **Single Source of Truth**: 데이터의 주인은 항상 버블 DB
+- 버블 → iframe: URL 파라미터 (`?lat=&lon=` 등)
+- iframe → 버블: `window.parent.postMessage({ type: 'result', data: ... }, '*')`
+
+### 상태 관리
+- 복잡한 상태 관리 라이브러리 사용 금지
+- 영구 데이터는 반드시 버블 DB로 저장
+
+---
+
+## 9. 앱 화면 구조 (실제 스크린샷 기반)
+
+> 스크린샷 원본: `~/pacers/screenshots/`
+
+### 하단 네비게이션
+홈 / 마라톤 / 크루 / 쿨다운 / 채팅 / 마이
+
+### 홈 화면 (`스크린샷 2026-06-11 오전 6.29.25.png`)
+- 상단: PACERS 로고 + 위치(서울특별시 상전동) + 필터 + 알림
+- 오픈런(Beta) 배너
+- **Today Weather**: 러닝지수 87/100, "지금 나가기 딱 좋아요!" 한줄 코멘트
+- **Daily Pacer**: "오늘의 동네 페이서를 소개합니다"
+
+### Today Weather 상세 (`스크린샷 2026-06-11 오전 6.29.38.png`)
+- 다크 배경, "오늘의 러닝 리포트"
+- 러닝지수 **87**/100 크게 표시, 브랜드 블루 컬러
+- 기온/체감/최고최저, 날씨 상태, 습도/바람/강수 그리드
+- 대기질·호흡 컨디션 (PM10/PM2.5)
+
+### 오픈런 탭 (`스크린샷 2026-06-11 오전 6.29.46.png`)
+- 필터: 전체/서울/경기/그 외 지역
+- 마감 시한 표시 (매주 금요일 12:00pm)
+- 코스 카드: 이름, 지역, 관심수, 해시태그
+- 코스 상세: 경로/거리/소요시간/출발지/페이스별 그룹 신청 (Beta 기간 무료)
+
+### 데일리 크루 탭 (`스크린샷 2026-06-11 오전 6.29.52.png`)
+- "데일리 크루 만들기" 상단 버튼
+- 러너 카드: 프로필사진, 닉네임/나이, 위치/거리, "같이 달려요" 버튼
+
+### 마라톤 캘린더 (`스크린샷 2026-06-11 오전 6.30.22.png`)
+- 필터: 전체/접수중/접수전/접수마감
+- 대회 카드: D-day, 대회명, 날짜, 거리, 썸네일
+- 대회 상세: 설명, 집결지/시간, 거리, 접수일정, **마라톤 동행 신청** 버튼
+
+### Daily Pacer 상세 (`스크린샷 2026-06-11 오전 6.30.37.png`)
+- 페이서 사진, 닉네임/1km 페이스 표시
+- 프로필: 나이/성별/키/지역/나와의 거리
+- "같이 달려요" 버튼 (티켓 소모) → 확인 모달
+
+### 쿨다운 탭 (`스크린샷 2026-06-11 오전 6.31.08.png`)
+- 카테고리: 전체/자유/러닝후기/마라톤준비/뱃지인증
+- 상단 배너: 친구 초대 이벤트
+- 게시글: 익명닉네임, 제목, 시간/조회수/댓글수
+- "+ 글쓰기" 플로팅 버튼
+
+### 채팅 탭 (`스크린샷 2026-06-11 오전 6.31.19.png`)
+- Daily Pacer / Daily Crew 탭 분리
+- 빈 상태: "아직 진행중인 대화가 없어요 / 동네 페이서에게 같이 달리기를 제안해보세요"
+
+### 마이 탭 (`스크린샷 2026-06-11 오전 6.31.25.png`)
+- 프로필 + 프로필 수정
+- 티켓 충전 (잔액 노출 — 115티켓)
+- 데일리 러닝로그 / 페이서스 뱃지 인증 / 챌린지 카드 / 친구 초대
+- 하단: 데일리 퀘스트 배너 + Pacers Challenge 배너
+
+### 데일리 퀘스트 (`스크린샷 2026-06-11 오전 6.31.53.png`)
+- 오늘의 퀘스트 달성 현황 (0/2)
+- Daily Runninglog 1회 + Cooldown 게시글 1회 → 무료 티켓 획득
+
+### 티켓 시스템 (리텐션 핵심)
+- 티켓으로 매칭 신청 ("같이 달려요")
+- 무료 획득: 데일리 퀘스트(러닝기록+쿨다운 → 1티켓), 친구 초대(30티켓)
+- 유료: 인앱결제 (토스페이먼츠)
+
+### 브랜드 / 로고
+- **앱 아이콘**: 블랙 배경에 흰색 대문자 P + "ACERS" 텍스트 (`Pacers 로고_블랙_ 1024 x 1024 px.png`)
+- **인스타 게시물 스타일**: 실제 러닝 사진 위에 반투명 블랙 박스 + 흰 텍스트, 하단 Pacers 로고
+- **카피 톤**: 직접적이고 행동 유도적 — "지금 바로", "혼자보다 함께", "외롭지 않습니다"
+
+---
+
+## 10. 핵심 기능 요약
+- **Today Weather**: 러닝 지수 기반 날씨 — `weather-app-pied-theta.vercel.app`
+- **Cooldown Auto Post**: GitHub Actions → Bubble Claude API → 하루 9회 자동 게시
+- **Daily Pacer**: 위치 기반 러너 매칭 (매일 12시 갱신)
+- **마라톤 캘린더**: 전국 대회 + D-day + 동행 매칭
+- **오픈런**: 큐레이션 그룹 러닝 (매주 토요일)
+- **데일리 크루**: 즉석 동네 러닝 모임
+- **데일리 퀘스트**: 러닝기록 + 쿨다운 → 무료 티켓 → 리텐션 루프
+
+---
+
+## 11. 기능별 상세 문서
+
+### Feature 03 사전 분석: Daily Pacer 버블 구조
+
+#### 현재 구현 상세 (버블 워크플로우 분석 완료)
+
+**프론트엔드 트리거 (01_main, Page is loaded)**
+- Only when: Current User's email is not empty
+- Step 1: `last_active = Current date/time` 업데이트
+- Step 2: `min_year = Current User's birth_year - 7` (나이 ±7년 범위 하한)
+- Step 3: `max_year = Current User's birth_year + 7` (나이 ±7년 범위 상한)
+- Step 4: `current_time` 상태 = Current date/time
+- Step 5: `cycle_start` 상태 = 오늘 날짜 + 12시간 (당일 정오)
+- Step 6: `cycle_start` 상태 = 어제 정오 (현재시각 < cycle_start일 때 — 자정~정오 사이 접속 처리)
+- Step 7: Schedule API Workflow `generate_daily_cards_v5`
+  - 조건: `last_card_refresh`가 비어있거나 < cycle_start (오늘 카드 미발급 시에만)
+  - 파라미터: user, limit=70, today_pm12, min_year, max_year
+  - Ignore privacy rules: ✓
+- Step 8: Pause
+
+**00_Just once condition_dailycard**
+- Do once, Only when `today_PM1200` is empty
+- `today_PM1200` = Current date/time:rounded down to day + hours: 12
+
+**백엔드 워크플로우: generate_daily_cards_v5**
+- Public API, No auth, Ignore privacy rules
+- 파라미터: `user`(User), `limit`(number), `today_pm12`(date), `min_year`(number), `max_year`(number)
+- **Step 1**: user의 `today_cards` 업데이트 (두 Search 결과 merge)
+  - `last_card_refresh = Current date/time`
+- **Step 2**: user에 대해 `last_card_assigned`, `last_viewed_date`, `extra_card_reset_time` 업데이트
+- **Step 3**: `viewed_today_list` 초기화, `last_view_reset` 업데이트
+
+**Search for Users 조건 (핵심 필터링)**
+- `unique id <> user` (본인 제외)
+- `home_address within 10km of user's home_address`
+- `home_address isn't empty`
+- `1:1 likes_sent doesn't contain user` (내가 좋아요 보낸 사람 제외)
+- `1:1 matched_users doesn't contain user` (이미 매칭된 사람 제외)
+- `unique id isn't in user's viewed_ids` (이미 본 카드 제외)
+- `1:1 likes_sent/received/matched_users` 중복 제외
+- `birth_year ≥ min_year` AND `birth_year ≤ max_year` (나이 ±7년)
+- `1:1 likes_received doesn't contain user`
+- **Sort 1**: home_address (거리 오름차순)
+- **Sort 2**: last_active (최근 접속 내림차순)
+- limit: `#limit` (두 검색 결과 merge → 총 70명 후보)
+
+**두 번째 Search (1000km fallback)**
+- 첫 번째 검색(10km)과 merge — 유저가 적은 지역에서 후보 부족 시 자동 보완
+- 조건: 나이 필터 없음, 1000km 이내, 동일한 좋아요/매칭/viewed 제외 로직
+- **핵심**: 10km 이내 후보가 적을 때 전국 단위로 확장되는 fallback 구조
+
+**프론트엔드 노출 (rg_recomend_DailyPacer)**
+- Data source: `Current User's today_cards:items until #2` (최대 2장)
+- Conditional: preferred_gender(이성/동성)에 따라 필터링
+- **성별 필터링을 백엔드 서치가 아닌 프론트 컨디셔널로 처리한 이유**: 버블 서치에 필터 추가 시 성능 저하가 심해서 의도적으로 프론트에서 처리. today_cards에는 모든 성별 포함해서 저장, 화면 노출 시 필터링
+
+**필터 설정 화면 (내 위치 및 필터 설정)**
+- 내 동네 위치 변경 (home_address 업데이트 → 다음 추천부터 반영)
+- 상대 성별: 모두 / 이성 / 동성 선택 → User DB `preferred_gender` 저장
+- 안내 문구: "아직 주변 러너 데이터가 적으면 먼 거리 러너가 추천될 수 있어요" (1000km fallback 인지)
+
+---
+
+## Feature 03: Daily Pacer 매칭 스코어 (2026-06-16 라이브)
+
+## 개요
+- **기능**: 버블이 거리순으로 뽑은 150명 후보 중 다차원 스코어로 상위 2명 선별
+- **배포**: 동일 Vercel (`weather-app-pied-theta.vercel.app/api/match`)
+- **파일**: `~/weather-app/api/match.js`
+- **핵심 원칙**: 스코어링은 "순위만 바꾸는 것". 버블이 today_cards를 먼저 채우고, 스코어링은 그 위에서만 작동
+- **상태**: ✅ 2026-06-16 라이브 배포 완료 (`git push origin main` → Vercel 자동 배포)
+
+## 작업 이력
+
+### 2026-06-16 (개발 완료 → 배포)
+- `api/match.js` 신규 생성 및 배포
+- **거리 점수**: 계단형(3km=100, 5km=75...) → 선형 연속값 `100 - km×3` (동점 14명 → 0명)
+- **접속 가중치 제거**: Toolbox paramlist5 한계로 last_active 전달 불가 → 상수값(5점)이라 순위에 영향 없음 → 제거
+- **모두 가중치 조정**: 거리45%→65% (이성 역전 임계 9km→5.7km로 축소, "같은 동네" 기준)
+- **최종 가중치 확정**: 모두(거리65·성별20·나이15) / 이성/동성(거리75·나이25)
+- QA 6/6 시나리오 통과 후 배포
+
+### 다음 개선 예정 (유저 5,000명+ 시)
+- last_active 반영: 버블 백엔드에서 30일 미접속 제외 필터 or Bubble API Connector로 구조 변경
+- 러닝 페이스 유사도 추가 (DailyRunningLog 데이터 활용)
+
+---
+
+## 전체 데이터 흐름
+
+```
+[페이지 로드] 01_main Page is loaded
+  → Step 1: last_active 업데이트
+  → Step 2~4: cycle_start (오늘 12:00) 계산
+  → Step 5: generate_daily_cards_v5 스케줄
+             (조건: last_card_refresh 비었거나 < cycle_start)
+
+[버블 백엔드] generate_daily_cards_v5
+  → Step 1: today_cards = Search Users (거리순, limit 150)
+             last_card_refresh = now
+             today_match_done = "no"
+  → Step 2: last_card_assigned, last_viewed_date, extra_card_reset_time 업데이트
+  → Step 3: viewed_today_list clear, last_view_reset 업데이트
+
+[프론트 "Do every time" 조건]
+  today_cards:count > 1 AND today_match_done is no
+  → Step 1: Run javascript (Toolbox)
+             → Vercel /api/match 호출
+             → 결과: bubble_fn_match_result({ outputlist1: top2 IDs })
+
+[JavascripttoBubble B event]
+  → Step 1 (only when outputlist1:count > 0):
+             today_cards = Search Users where unique id is in outputlist1
+  → Step 2 (항상):
+             today_match_done = "yes"
+
+[화면 표시]
+  rg_recomend_DailyPacer → today_cards:items until #2 (최대 2장)
+```
+
+---
+
+## 매칭 알고리즘 (api/match.js)
+
+### 입력값 (Toolbox Run Javascript → POST body)
+| 파라미터 | Bubble 표현식 |
+|---|---|
+| param1 | Current User's home_address's latitude |
+| param2 | Current User's home_address's longitude |
+| param3 | Current User's birth_year |
+| param4 | Current User's gender |
+| param5 | Current User's preferred_gender's Display |
+| paramlist1 | today_cards:each item's unique id |
+| paramlist2 | today_cards:each item's home_address's latitude |
+| paramlist3 | today_cards:each item's home_address's longitude |
+| paramlist4 | today_cards:each item's birth_year |
+| paramlist5 | today_cards:each item's gender |
+
+> **참고**: Toolbox paramlist 최대 5개 한계로 last_active 전달 불가 → 접속 가중치 제거. 유저 5,000명+ 시 버블 백엔드 필터(30일 미접속 제외)로 대응 예정.
+
+### 스코어링 가중치
+
+**이성/동성 선택** (hard filter 적용 후):
+| 요소 | 가중치 | 역전 임계 |
+|---|---|---|
+| 거리 | 75% | 동갑이 8.7km 이내면 12살차 0.5km 역전 |
+| 나이차 | 25% | |
+
+**모두 선택** (성별 soft weight):
+| 요소 | 가중치 | 역전 임계 |
+|---|---|---|
+| 거리 | 65% | |
+| 성별 (이성=100, 동성=50) | 20% | 이성이 5.7km 이내면 동성 0.5km 역전 |
+| 나이차 | 15% | |
+
+### 거리 점수 — 선형 연속값 (동점 방지)
+```
+getDistScore(km) = Math.max(5, Math.round(100 - km × 3))
+```
+| km | 점수 | 체감 |
+|---|---|---|
+| 0.5km | 99 | 같은 아파트 단지 |
+| 1km | 97 | 도보 12분 |
+| 3km | 91 | 자전거 12분 |
+| 5km | 85 | 버스 1정거장 |
+| 10km | 70 | 버스 20분 |
+| 20km | 40 | 차 25분 |
+| 30km | 10 | 차 40분 |
+| 33km+ | 5 (최솟값) | |
+
+### 나이차 점수
+| 나이차 | 점수 |
+|---|---|
+| 3살 이내 | 100 |
+| 5살 이내 | 80 |
+| 7살 이내 | 60 |
+| 9살 이내 | 40 |
+| 10살 이상 | 25 |
+
+### 모두 Failsafe ← 핵심 개선
+top2가 모두 동성이면 → 스코어 최고점 이성 1명을 강제 삽입 (이성 최소 1장 보장)
+
+> **왜 중요한가**: "모두"가 디폴트 선택값. 버블 거리순만으로는 근처에 동성이 많으면 동성 2명이 노출됨.
+> 이성 1장 보장 → 유저가 매칭 시도(티켓 소모) 확률 ↑ → 매칭 성사율 ↑ → 수익 직결.
+> 버블 거리순으로는 절대 구현 불가능했던 로직.
+
+---
+
+## 버블 ↔ Vercel 양방향 소통
+
+```
+버블 → Vercel:
+  Toolbox Run Javascript
+  → properties.param1~5 (단일값: 나의 좌표/나이/성별)
+  → properties.paramlist1~5 (리스트: 후보 150명 데이터)
+  → POST https://weather-app-pied-theta.vercel.app/api/match
+
+Vercel → 버블:
+  { top2: ["user_id_1", "user_id_2"], debug: [...] }
+  → bubble_fn_match_result({ outputlist1: top2 })
+  → JavascripttoBubble B element 트리거
+  → 버블 워크플로우 실행
+```
+
+---
+
+## 실패 복구 구조 (Failsafe)
+
+### 클라이언트 JS (Run Javascript script)
+- `me.lat/lon` 없음 → 즉시 fallback
+- candidates ID 추출 실패 → 해당 유저 제외 (전체 에러 없음)
+- 네트워크 오류 / API 400/500 → catch → fallback
+- **5초 타임아웃** → AbortController로 자동 abort → fallback
+- 유효하지 않은 ID (예: "[object Object]") → 필터링 후 빈 배열 → fallback
+
+### fallback 동작
+```
+bubble_fn_match_result({ outputlist1: [] })
+  → Step 1 (count > 0 조건) 스킵 → today_cards 그대로 유지 (버블 거리순 150명)
+  → Step 2 (항상) 실행 → today_match_done = "yes" (무한 재시도 방지)
+  → 화면: today_cards:items until #2 → 버블 거리순 상위 2명 표시
+```
+
+### 복구 사이클
+- 오늘 스코어링 실패 → 거리순 카드 2장 표시 (서비스 정상)
+- 다음날 오후 12시 이후 진입 → generate_daily_cards_v5 재실행 → today_match_done = "no" → 스코어링 재시도
+
+### 카드 미노출 케이스 (우리 코드와 무관)
+- generate_daily_cards_v5 자체 실패 → today_cards 비어있음 → 버블 기존 로직 문제
+
+---
+
+## 버블 필드 (User 테이블)
+| 필드 | 타입 | 역할 |
+|---|---|---|
+| `today_cards` | List of Users | 당일 추천 카드 (150명 → 스코어링 후 2명) |
+| `today_match_done` | yes/no | 당일 스코어링 완료 여부 (중복 실행 방지) |
+| `last_card_refresh` | date | 마지막 카드 갱신 시간 (12시 사이클 기준) |
+
+## 버블 엘리먼트 (01_main 페이지)
+| 이름 | 역할 |
+|---|---|
+| `JavascripttoBubble A` | 스플래시 화면용 (bubble_fn_show_splash) — 건드리지 말 것 |
+| `JavascripttoBubble B` | 매칭 결과 수신용 (bubble_fn_match_result, outputlist1 type: text) |
+
+## 버블 워크플로우
+| 이름 | 역할 |
+|---|---|
+| `00_클로드코드 매칭 스코어_Every time condition` | 스코어링 트리거 (조건: today_cards:count > 1 AND today_match_done is no) |
+| `JavascripttoBubble B event` | 결과 수신 → Step1: today_cards 업데이트 (count>0), Step2: today_match_done=yes (항상) |
+| `generate_daily_cards_v5` | 버블 백엔드: 150명 후보 생성 + today_match_done="no" 초기화 |
+
+---
+
+## 12. 다음 작업 예정 (Feature 04+)
+
+> Feature 04 아이디어가 생기면 기능 파이프라인 테이블(섹션 2)에 먼저 등록 후 작업 시작.
+
+---
+
+## 13. 수익 모델
+- **현재**: 인앱 결제 (티켓 시스템)
+- **예정**: 구독 모델, B2B 광고
+
+---
+
+## 14. 버블 백엔드 주요 워크플로우
+- `generate_daily_cards_v0~v6` — 데일리 카드 생성 (v6 최신)
+- `1:1_send_invite` / `1:1_accept_invite` — 1:1 매칭
+- `dc_send_invite` / `dc_accept_invite` — 데일리 크루
+- `create_cooldown_post` — 쿨다운 자동 게시 (GitHub Actions 트리거)
+
+---
+
+## 15. OneSignal 푸시 알림 연동 구조
+
+### API Connector 설정 (`OneSignal-Send Push`)
+- **Endpoint**: `POST https://onesignal.com/api/v1/notifications` (구 v1 API, player ID 방식)
+- **Auth**: `Basic os_v2_app_4yik775...` (헤더)
+- **App ID**: `e610afff-b159-4c95-8f3c-ffdf86433fb1`
+- **Body 구조**:
+```json
+{
+  "app_id": "e610afff-b159-4c95-8f3c-ffdf86433fb1",
+  "include_player_ids": ["<include_player_ids>"],
+  "headings": { "en": "<title>" },
+  "contents": { "en": "<message>" }
+}
+```
+- **Parameters**: `title`, `message`, `include_player_ids`
+- **수신자 지정**: User 테이블의 `onesignal_subscription_id` 필드 사용
+- **딥링크 미적용 상태** ⚠️ — body에 `"url"` 필드 없음 → 현재 모든 알림이 홈으로 이동
+
+### 딥링크 추가 방법
+body에 `"url"` 필드 추가:
+```json
+{
+  "app_id": "...",
+  "include_player_ids": ["..."],
+  "headings": { "en": "..." },
+  "contents": { "en": "..." },
+  "url": "https://pacers.kr/01_main?tab=cooldown_detail&cd_id=<cd_id>"
+}
+```
+버블 API Connector body에 `<cd_id>` 동적 파라미터 추가 필요.
+
+---
+
+## 16. 쿨다운 댓글 버블 워크플로우 분석
+
+### 익명 댓글 구조 (CooldownAnonIdentity)
+- 게시자 본인 댓글 → 게시글 작성 시 생성된 익명닉네임 그대로 사용
+- 다른 유저 첫 댓글 → 새 `CooldownAnonName` 생성 (post + user 조합으로 고유)
+- 같은 게시글 내 재댓글 → 기존 생성된 익명닉네임 재사용
+
+### 프론트엔드 워크플로우 (댓글 제출 시) — 총 14단계
+
+**Step 1**: Create CooldownAnonName (신규 유저)
+- Only when: `CooldownAnonNames:count = 0` AND `Current User ≠ cd_post_author`
+- 이 post에서 처음 댓글 다는 타인 → 새 익명닉네임 생성
+
+**Step 2**: Create CooldownComment (게시자 본인)
+- Only when: `Current User = cd_post_author`
+- `an_nickname` = Step 1의 닉네임 (게시글과 동일한 익명)
+
+**Step 3**: Create CooldownComment (신규 타인 — 처음 댓글)
+- Only when: `CooldownAnonNames:count = 0` AND `Current User ≠ cd_post_author`
+
+**Step 4**: Create Notification (게시자에게 앱 내 알림)
+- Only when: `Current User ≠ cd_post_author` AND `Step 3 is not empty`
+- `receiver = cd_post_author`, `noti_type = cooldown_comment_new`
+
+**Step 5**: OneSignal-Send Push (게시자에게 푸시)
+- Only when: `Current User ≠ cd_post_author` AND `Step 3 is not empty`
+- title: `"새 댓글이 달렸어요 💬"`
+- message: `"[Step 3 an_nickname]님이 회원님의 글에 댓글을 남겼어요"`
+- include_player_ids: `cd_post_author's onesignal_subscription_id`
+
+**Step 6**: Create CooldownComment (기존 타인 — 재댓글)
+- Only when: `Step 1's an_nickname is empty` AND `Current User ≠ cd_post_author`
+- `an_nickname` = Search CooldownAnonNames:first item's an_nickname (기존 닉네임 재사용)
+
+**Step 7~8**: Notification + Push (Step 6 케이스)
+- Step 5와 동일하나 Step 6 결과 기반
+
+**Step 9**: Make changes to Cooldown_post (게시자 본인 케이스)
+- `cd_comments add Step 2`, `cd_commenters add Current User`
+
+**Step 10**: Make changes to Cooldown_post (타인 케이스)
+
+**Step 11~13**: Scroll → Pause → Reset inputs
+
+**Step 14**: Schedule API Workflow `send_cooldown_author_reply_noti` on a list
+- Only when: `Current User = cd_post_author` (게시자가 댓글 달면 → 기존 댓글 작성자들에게 알림)
+- Type of things: User
+- List: `cd_commenters:filtered` (기존 댓글 작성자 목록)
+- API Workflow: `send_cooldown_author_reply_noti`
+- 파라미터: `receiver = This User`, `post = fg_03_Cooldown_Comment's Cooldown_post`
+- Scheduled date: Current date/time (즉시 실행)
+
+### 백엔드 API Workflow: `send_cooldown_author_reply_noti`
+게시자가 자기 글에 댓글 달 때 → 이전 댓글 작성자들에게 알림 발송
+- Step 1: Create Notification (receiver = This User)
+- Step 2: OneSignal-Send Push
+  - title: `"새 댓글이 달렸어요 💬"`
+  - message: `"[CooldownComments:first item's an_nickname]님이 회원님의 댓글에 답글을 남겼어요"`
+  - include_player_ids: `receiver's onesignal_subscription_id`
+
+### 현재 딥링크 미적용 상태 + 개선 포인트
+- 현재: 모든 댓글 알림 탭 시 → 홈으로 이동
+- 개선: `OneSignal-Send Push` API Connector body에 `"url"` 파라미터 추가
+  ```
+  "url": "https://pacers.kr/01_main?tab=cooldown_detail&cd_id=[해당 post unique id]"
+  ```
+- 버블에서 `cd_id` 파라미터를 동적으로 넘겨야 함 (워크플로우에서 `Cooldown_post's unique id` 참조)
+
+---
+
+## 17. 2026-06-17 작업 이력
+
+### ✅ 완료
+
+**쿨다운 댓글 푸시 알림 딥링크** — BN Push + 앱내 딥링크 구현
+**쿨다운 스케줄러 전환** — GitHub Actions → cron-job.org (9개 정시 잡)
+**매칭 스코어 배포** — 2026-06-16 라이브 완료 (failsafe 검증)
+
+---
+
+## 18. 2026-06-18 작업 이력
+
+### ✅ 완료
+
+**1대1 호감(Daily Card) 딥링크 전략 재검토**
+- 원래 계획: BN Push 딥링크로 sender 데일리카드 직진
+- 문제 발견: 앱 이미 켜있으면 Page is loaded 미작동 → current_invite 설정 불가
+- **절충안 확정: 모든 푸시를 알림탭으로 통일**
+  - URL: `https://pacers.kr/01_main?tab=notibell`
+  - 이유: 기존 Notification 로직 재활용, 파라미터 복잡도 감소, 안정성 증대
+
+**채팅 푸시 전략 수립**
+- 원래: 04_chat_detail_page로 채팅방 직진 → 스플래시 멈춤
+- **Plan B (성공)**: 채팅 목록으로 진입
+  - Daily Pacer: `https://pacers.kr/01_main?tab=chatting&chat_tab=Daily%20Pacer`
+  - Daily Crew: `https://pacers.kr/01_main?tab=chatting&chat_tab=Daily%20Crew`
+
+**모든 푸시 알림탭 통일 전략 확정**
+- 쿨다운: BN Push 딥링크 (게시글 직진) → 유지
+- Daily Card, 채팅, 오픈런 등 모든 푸시: 알림탭으로 통합
+- 수정 패턴: OneSignal 기존 구조 유지, **Launch URL만 `https://pacers.kr/01_main?tab=notibell`로 변경**
+- 동작: noti_type 분기 로직으로 자동 라우팅
+
+**1대1 호감 메커니즘 상세 분석**
+- 워크플로우: `btn_r_together_데일리카드` (프론트) → `1:1_send_invite` (백엔드)
+- RunningInvite 생성: Step 2에서 생성 (거리순 150명 → 매칭 스코어 top 2)
+- Notification + 푸시: Step 6에서 발송
+- 핵심: **Notification이 target_invite 포함** → 알림탭에서 진입 시 current_invite 자동 설정 가능
+
+**테스트 환경 OneSignal 오염 문제 발견**
+- 증상: iPhone 1개에서만 여러 계정의 푸시 중복 수신, 참여하지 않은 오픈런도 옴
+- 원인: 같은 폰 = 같은 subscription_id, 여러 계정 회원가입 = 모두 같은 ID
+- 결론: **테스트 데이터 오염, 라이브 서비스 무영향** (일반 유저는 1폰=1계정)
+
+**라이브 서비스 마일스톤 확인**
+- 회원: **1,079명 달성**
+- 긍정적 신호: 탈퇴율 개선 (마라톤 캘린더 + 오픈런 추가 후)
+  - 기존: 데일리카드만으로 즉시 탈퇴 (임계점 미달)
+  - 지금: 다양한 콘텐츠로 체류율 증가 → 리텐션 개선
+
+**쿨다운 댓글 푸시 알림 딥링크 (iOS/Android 모두 작동)**
+- OneSignal API Connector (구 v1, player ID 방식) → BDK Native 푸시로 전환
+- BDK Native `BN - Push Notification` 액션으로 딥링크 구현
+- Deeplink URL: `https://pacers.kr/01_main?tab=cooldown_detail&cd_id=[post unique id]`
+- 프론트 WF Step 5, 8 + 백엔드 `send_cooldown_author_reply_noti` Step 2 수정 완료
+- ⚠️ 상대 경로(`/01_main?...`) 사용 시 iOS 중단 — 반드시 전체 URL 사용
+
+**Today Weather 위치 변경**
+- 홈 화면 상단 → 데일리 러닝로그 위(하단)으로 이동
+- 이유: 2~3초 로딩 스피너가 앱 진입 첫인상을 "느린 앱"으로 만듦
+
+### ⏳ 미해결 / 추후 작업
+
+**iOS 키보드 + 댓글 입력창 (fg_03_Cooldown_Comment)**
+- 증상: 쿨다운 상세 페이지에서 스크롤 후 댓글 입력 탭 시 키보드가 플로팅 그룹을 덮음
+- 원인: iOS WebView는 키보드 올라올 때 뷰포트를 리사이즈하지 않음
+- 해결책: 버블 `fg_03_Cooldown_Comment` → "Move with keyboard" 체크박스 (Growth 플랜 전용)
+- 현재 Starter 플랜 → Growth 업그레이드($29/월) 시 즉시 해결 가능
+- JS 우회는 버블 포지셔닝과 충돌하여 불가
+
+**Android 콜드 스타트 흰 화면 프리징**
+- 증상: 앱 완전 종료 후 푸시 탭 시 간헐적 흰 화면 → 프리징 (재현율 불규칙)
+- 원인: BDK Native Android WebView 콜드 스타트 초기화 지연 버그
+- 딥링크 문제 아님 — BDK 레벨 버그, CSS/JS로 해결 불가
+- 조치: BDK 고객지원 문의 중
+
+**Android 앱 시작 페이지 오류**
+- 증상: `00_onboarding_step_page`로 진입 (정상: `00_sign_up_sign_in_step1_page`)
+- BDK 빌드 버그, 고객지원 답변 대기 중
+
+**날씨 카드(card.html) 좌표 업데이트 안 됨**
+- 증상: 홈어드레스 변경 시 상세 페이지(index.html)는 반영되나 요약 카드는 안 바뀜
+- 원인: API 실패 시 광화문 fallback 로드 후 새 좌표 수신 경로 없음
+- 해결책: 주소 변경 버블 워크플로우에 Run Javascript 추가
+  ```javascript
+  var f = document.getElementById('weather-frame');
+  if (f && f.contentWindow) {
+    f.contentWindow.postMessage({
+      lat: [Current User's home_address's latitude],
+      lon: [Current User's home_address's longitude]
+    }, '*');
+  }
+  ```
+
