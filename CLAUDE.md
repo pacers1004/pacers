@@ -46,6 +46,49 @@
 - 버블 워크로드 폭탄 요금 방지 — 리소스 효율적으로 사용
 - UI/디자인/색상 건드리지 말 것 (명시적 요청 없으면)
 
+### ⚠️ 필수: API 크레딧 모니터링
+
+**Vercel 코드에서 Claude API 호출 시 별도 Console 크레딧 소모**
+
+| 항목 | 내용 |
+|------|------|
+| API 호출처 | weather-app/api/match.js (Daily Pacer 매칭) |
+| 사용 토큰 | 월 ~7,200 input + 900 output (약 ₩1,500) |
+| 크레딧 소진 시 | API 호출 자동 실패 (403 error) |
+| 알림 절차 | 크레딧 부족 시 **대표님에게 즉시 알림** |
+
+**에러 감지 로직:**
+```javascript
+// match.js에서 403 error 감지 시:
+// 1. 콘솔 로그: [CRITICAL] Claude API 크레딧 부족
+// 2. 응답: 503 + error_code (claude_api_credit_exhausted)
+// 3. 충전 링크 포함
+```
+
+**모니터링 방법:**
+
+| 방법 | 주기 | 확인처 | 액션 |
+|------|------|--------|------|
+| 실시간 모니터링 | 발생 시 | Vercel Logs | API 요청 실패 → 콘솔 [CRITICAL] 확인 |
+| 월 1회 점검 | 월초 | [Anthropic Console](https://console.anthropic.com/account/billing/overview) | Usage 확인 → 부족 시 충전 |
+| Vercel 대시보드 | 주 1회 | Vercel Functions | 요청 실패율 확인 |
+
+**Vercel 로그 확인 방법:**
+```
+1. Vercel 프로젝트 접속 → weather-app
+2. Functions → api/match.js → Logs
+3. [CRITICAL] 키워드로 검색 → 크레딧 부족 발견
+4. 즉시 https://console.anthropic.com/account/billing/overview 접속해 충전
+```
+
+**API 크레딧 충전:**
+1. Anthropic Console → Billing
+2. Add payment method → 카드 정보 입력
+3. Credits 또는 Prepaid 플랜 선택
+4. 충전 완료 후 Vercel 자동 복구 (재배포 불필요)
+
+---
+
 ### ⚠️ 필수: 에러 노출 방지 원칙 (Failsafe First)
 버블에 iframe/HTML 엘리먼트로 미니앱을 삽입할 때 **에러 화면이 유저에게 그대로 노출되는 상황은 절대 허용하지 않는다.**
 
@@ -753,6 +796,24 @@ body에 `"url"` 필드 추가:
 **Today Weather 위치 변경**
 - 홈 화면 상단 → 데일리 러닝로그 위(하단)으로 이동
 - 이유: 2~3초 로딩 스피너가 앱 진입 첫인상을 "느린 앱"으로 만듦
+
+**쿨다운 자동게시 예시 풀 확장 (65 → 116개)**
+- Blind 러닝 RUNNING 채널 스크린샷 24장 추가 분석
+- Evergreen 47개 추출 (날짜/대회명/계절 특정 내용 필터링)
+- `~/weather-app/api/examples.json` + `~/cooldown-scheduler/examples.json` 동기화
+- 매 실행마다 116개 중 랜덤 10개 선택 → Claude가 새 글 생성
+
+**쿨다운 프롬프트 규칙 강화**
+- 기존: 영어 날씨 필터(REDDIT_FILTER)만 존재
+- 추가: 한국어 날씨/계절/날짜/지명 금지 규칙
+  - "날씨/계절/날짜 언급 금지 (덥다/춥다/선선하다/오늘/주말 등)"
+  - "특정 대회명/코스명/지명 금지 (한강/남산/광교 등)"
+
+**쿨다운 자동게시 시스템 구조 확인 (라이브 상태)**
+- 흐름: `cron-job.org → Vercel /api/cooldown → Claude API → Bubble create_cooldown_post_v2`
+- 9개 크론잡 모두 Vercel 엔드포인트 연결 확인 완료
+- AI냄새 필터 테스트: 10/10 통과
+- Bubble `create_cooldown_post` (v1) 삭제 가능 상태 (v2로 완전 전환됨)
 
 ### ⏳ 미해결 / 추후 작업
 
