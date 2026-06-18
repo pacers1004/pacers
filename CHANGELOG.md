@@ -30,23 +30,42 @@
 - ✅ cron-job.org 설정 (기존 쿨다운 스케줄러와 동일)
 - ⏳ 6시간마다 자동 실행 예정
 
+**Slack 알림 최적화**
+- ✅ Webhook 메시지 포맷 개선 (시각적 강조)
+- ✅ Slack 배지 설정 자동 활성화 (휴대폰 알림 표시 가능)
+- ✅ Slack 앱 재시작 완료
+
+**모니터링 웹 대시보드 구축**
+- ✅ `dashboard.html` 신규 작성 (실시간 상태 확인)
+- ✅ Vercel 배포 상태 표시
+- ✅ GitHub 커밋 활동 표시
+- ✅ 5분마다 자동 새로고침
+
+**Cron-job 스케줄링**
+- ✅ 4개 모니터링 job 등록 (6시간 간격: UTC 0, 6, 12, 18)
+- ✅ KST 기준: 09:00, 15:00, 21:00, 03:00
+- ✅ 다음 자동 실행: 오늘 밤 9시 (21:00 KST)
+
 **배포 상태**
-- ✅ GitHub 푸시 완료 (`fce83df`)
+- ✅ GitHub 푸시 완료 (모니터링 API + 대시보드)
 - ✅ Vercel 자동 배포 완료
 - ✅ API 테스트 성공 (success: true)
+- ✅ Slack 수신 테스트 성공 (webhook ok)
 
-**수신 알림 예시**
+**수신 가능 채널**
+1. 🚀 **웹 대시보드**: https://weather-app-pied-theta.vercel.app/dashboard.html
+2. 💬 **Slack #alerts**: 6시간마다 정기 리포트 + 즉시 긴급 알림
+3. 📱 **모바일**: Slack 배지로 알림 표시
+
+**시스템 구조**
 ```
-정상 상황 (6시간마다):
-🤖 Pacers 자동 모니터링 리포트
-✅ Vercel 배포: Ready
-✅ GitHub 커밋: 최근 활동
-
-에러 발생 (즉시):
-🚨 [긴급] Pacers 모니터링 에러 발생!
-❌ Vercel: API error
-❌ GitHub: Token missing
-⏰ 즉시 확인 필요!
+cron-job.org (6시간마다)
+  ↓
+Vercel /api/monitor
+  ↓
+Slack Webhook (즉시)
+  ↓
+#alerts 채널 알림
 ```
 
 ---
