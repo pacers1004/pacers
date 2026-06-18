@@ -3,7 +3,7 @@
 ## 1. 프로젝트 정체성
 - **서비스명**: 페이서스(Pacers) — 러닝메이트 매칭 및 소셜 러닝 플랫폼
 - **핵심 철학**: "멀리, 빨리 뛰는 법보다 오늘도 운동화를 다시 신는 법을 제안합니다."
-- **현재**: 국내 버블앱 순위 19위, 유저 900명 라이브 서비스
+- **현재**: 국내 버블앱 순위 19위, 유저 1,079명 라이브 서비스
 - **목표**: 국내 1위 → 세계 1위 러닝 플랫폼
 - **경쟁 앱**: 나이키런클럽, 스트라바
 - **역할**: 너는 페이서스의 수석 개발자다. 페이서스의 성공을 위해 창의적으로 사고하고 능동적으로 제안해라.
@@ -15,8 +15,9 @@
 | # | 기능명 | 로컬 디렉토리 | GitHub | 배포 | 상태 |
 |---|--------|--------------|--------|------|------|
 | 01 | Today Weather (날씨 위젯) | `~/weather-app` | `pacers1004/weather-app` | Vercel | ✅ 라이브 |
-| 02 | Cooldown Auto Post (쿨다운 자동 게시) | `~/cooldown-scheduler` | `pacers1004/cooldown-scheduler` | GitHub Actions | ✅ 라이브 |
+| 02 | Cooldown Auto Post (쿨다운 자동 게시) | `~/cooldown-scheduler` | `pacers1004/cooldown-scheduler` | cron-job.org + Vercel | ✅ 라이브 |
 | 03 | Daily Pacer 매칭 스코어 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ✅ 라이브 |
+| 04 | 자동 모니터링 & Slack 알림 | `~/weather-app` | `pacers1004/weather-app` | Vercel + cron-job.org | ✅ 라이브 |
 
 ### 네이밍 컨벤션
 - **로컬**: `~/[feature-slug]/`
@@ -349,7 +350,7 @@ https://pacers.kr/01_main?tab=cooldown_detail&cd_id=[Trigger CooldownPost's uniq
 
 ## 10. 핵심 기능 요약
 - **Today Weather**: 러닝 지수 기반 날씨 — `weather-app-pied-theta.vercel.app`
-- **Cooldown Auto Post**: GitHub Actions → Bubble Claude API → 하루 9회 자동 게시
+- **Cooldown Auto Post**: cron-job.org → Vercel /api/cooldown → Claude API → Bubble → 하루 9회 자동 게시
 - **Daily Pacer**: 위치 기반 러너 매칭 (매일 12시 갱신)
 - **마라톤 캘린더**: 전국 대회 + D-day + 동행 매칭
 - **오픈런**: 큐레이션 그룹 러닝 (매주 토요일)
