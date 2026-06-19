@@ -5,6 +5,17 @@
 
 ---
 
+## 📅 2026-06-19 | Claude Code — examples.json 확장 (97→139개)
+
+### ✅ 쿨다운 자동게시 예시 풀 확장 (+42개)
+- Blind 러닝 RUNNING 채널 스크린샷 78개(PNG 31개 + JPG 47개) 분석
+- evergreen 기준 통과 항목만 추출: 날씨/계절/지명/대회명/해장 전량 제외
+- 카테고리별 추가: 훈련/마일스톤 15개, 장비/기어 14개, 부상/재활 7개, 커뮤니티 6개
+- `weather-app/api/examples.json` + `cooldown-scheduler/examples.json` 동기화
+- 두 레포 모두 git push → Vercel 자동 배포
+
+---
+
 ## 📅 2026-06-19 | Claude Code — Natively 답변 확정 + Feature 05 첫인상 기획
 
 ### ✅ Natively 공식 답변 수령 → 이주 확정
