@@ -38,7 +38,62 @@
 
 ---
 
+## 3-B. 개발환경 (로컬 Mac) — 2026-06-19 기준
+
+### 설치된 도구
+| 도구 | 버전 | 경로 |
+|------|------|------|
+| Node.js | v24.17.0 | `/usr/local/bin/node` |
+| npm | v11.13.0 | `/usr/local/bin/npm` |
+| Python | 3.14.6 | `/Library/Frameworks/Python.framework/Versions/3.14/bin/python3` |
+| Vercel CLI | v54.14.2 | `~/.npm-global/bin/vercel` |
+| Python anthropic SDK | v0.111.0 | pip3로 설치됨 |
+
+### npm 전역 디렉토리
+- `~/.npmrc` → `prefix=~/.npm-global`
+- PATH: `~/.zshrc` + `~/.zprofile` 모두에 `export PATH="$HOME/.npm-global/bin:$PATH"` 추가됨
+
+### Vercel CLI 사용법 (Claude Code에서)
+```bash
+# 새 터미널 / 일반 쉘: 그냥 사용
+vercel --prod
+
+# Claude Code Bash 툴: 전체 경로 사용 (세션별 PATH 미적용)
+~/.npm-global/bin/vercel --prod
+~/.npm-global/bin/vercel logs
+~/.npm-global/bin/vercel env pull .env.local
+```
+
+### Vercel 로그인 상태
+- 계정: `bimhara-9117`
+- 프로젝트: `pacers-projects1004/weather-app`
+- **재로그인 불필요** (토큰 유지됨)
+
+### Claude Code 환경
+- VS Code Extension + 터미널 CLI + Claude.ai 앱 3가지 동시 사용 중
+- 설정 파일: `~/.claude/settings.json` (전역 권한), `~/.claude/settings.local.json` (세션별 추가 권한)
+- 메모리: `~/.claude/projects/-Users-janghara-weather-app/memory/`
+
+---
+
 ## 4. 개발 원칙
+
+### 🚫 최우선 규칙: 할루시네이션 금지 (모든 Claude Code가 따를 규칙)
+**추측·상상을 사실처럼 말하지 않는다. 모르면 "모른다"고 한다.**
+
+- ❌ 검증 안 된 회사 내부 사정·통계·수치·사례를 지어내기
+- ❌ "~한다더라", "보통 ~하다"를 근거 없이 단정
+- ❌ 확인 안 한 기능/필드/API 동작을 있다고 말하기
+- ✅ 팩트 / 추측 / 일반론을 **명확히 구분해서** 말한다
+  - 팩트 → 출처(포럼 링크, 공식 문서, 코드 직접 확인) 제시
+  - 추측 → "추정입니다 / 가능성입니다"라고 명시
+  - 모름 → "모릅니다 / 확인 필요"라고 솔직히
+- ✅ 코드·버블 필드·워크플로우는 **직접 확인 후** 답한다 (기억/상상 금지)
+- ✅ 대표님이 "이거 팩트야?"라고 물으면 즉시 검증 가능 여부로 구분해 답한다
+
+**Why**: 대표님이 라이브 서비스(유저 1,079명) 의사결정을 내가 준 정보로 한다. 지어낸 정보는 잘못된 배포·전략으로 직결된다. 신뢰가 깨지면 협업 자체가 무의미해진다.
+
+### 기타 원칙
 - 파일 수정 시 최소한만 변경, 불필요한 파일 읽기 금지
 - UI/UX는 러너 관점에서 판단
 - 미니멀리즘 유지 — 러닝 본질에 집중

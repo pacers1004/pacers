@@ -5,6 +5,46 @@
 
 ---
 
+## 📅 2026-06-19 | Claude Code (VS Code) — 개발환경 세팅 세션
+
+### 🔧 Node.js / Python / Vercel CLI 연동 완성
+
+**목표**: 다음 Claude Code 세션부터 배포·로그·환경변수를 직접 처리할 수 있도록 개발환경 완비
+
+**확인된 설치 상태**
+- ✅ Node.js v24.17.0 (`/usr/local/bin/node`)
+- ✅ npm v11.13.0
+- ✅ Python 3.14.6 (`/Library/Frameworks/Python.framework/Versions/3.14/bin/python3`)
+- ✅ weather-app 의존성 (node_modules 설치됨)
+- ✅ cooldown-scheduler 의존성 (axios, dotenv, node-cron 설치됨)
+
+**신규 설치 / 설정**
+- ✅ npm 전역 디렉토리 변경 → `~/.npm-global` (`~/.npmrc`에 `prefix=~/.npm-global`)
+- ✅ PATH 추가 (`~/.zshrc` + `~/.zprofile` 모두):
+  ```
+  export PATH="$HOME/.npm-global/bin:$PATH"
+  ```
+- ✅ Vercel CLI v54.14.2 전역 설치 (`~/.npm-global/bin/vercel`)
+- ✅ Vercel 로그인 상태: `bimhara-9117` (재로그인 불필요)
+- ✅ Python `anthropic` SDK v0.111.0 설치 (`pip3 install anthropic requests`)
+
+**Claude Code 권한 추가** (`~/.claude/settings.json`)
+- 추가된 항목: `pip3`, `cp`, `mkdir`, `touch`, `which`, `wc`, `diff`, `zip`, `unzip`, `open`, `chmod`, `source`
+
+**이제 Claude Code가 직접 할 수 있는 것**
+| 명령어 | 용도 |
+|--------|------|
+| `~/.npm-global/bin/vercel --prod` | weather-app 즉시 배포 |
+| `~/.npm-global/bin/vercel logs` | 실시간 에러 로그 확인 |
+| `~/.npm-global/bin/vercel env pull .env.local` | 환경변수 로컬 동기화 |
+| `python3 -c "import anthropic..."` | Python으로 Claude API 직접 호출 |
+
+**참고: vercel 명령어 사용법**
+- 새 터미널에서는 `vercel` 그냥 사용 가능 (PATH 적용됨)
+- Claude Code Bash에서는 `~/.npm-global/bin/vercel` 전체 경로 사용 (세션별 PATH 미적용)
+
+---
+
 ## 📅 2026-06-18 | Claude Code (admin@pacers.kr) — 오후 세션
 
 ### 🚀 자동 모니터링 시스템 구축 완료 (24/7)
