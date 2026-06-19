@@ -915,6 +915,53 @@ body에 `"url"` 필드 추가:
 
 ---
 
+## 19. 🚨 BDK → Natively 이주 전략 (2026-06-19 조사)
+
+> **배경**: BDK Native(앱 래퍼)가 사실상 방치/지원중단 상태로 확인됨. 라이브 앱(유저 1,079명) + 수익(인앱결제)이 BDK에 의존 → 사업 연속성 리스크. 무중단 이주 전략 수립.
+
+### 결론 (한 줄)
+**목표 = Natively 이주.** Bubble 공식 Native는 탈락(소비성 IAP 미지원).
+
+### 핵심 팩트 (출처 확인)
+| 팩트 | 출처 |
+|------|------|
+| Bubble 공식 Native IAP = **구독만 지원, 소비성 토큰/크레딧 미지원** | [Bubble IAP 문서](https://manual.bubble.io/help-guides/getting-started/building-for.../native-ios-and-android/in-app-purchases) |
+| → 페이서스 티켓(소비성 크레딧) = Bubble Native로 판매 불가 | 위 |
+| Natively = RevenueCat 기반 → **소비성 크레딧/가상화폐 지원** | [RevenueCat Virtual Currency](https://www.revenuecat.com/blog/company/revenuecat-virtual-currency/) |
+| Natively 푸시 = **OneSignal** (페이서스가 이미 쓰는 것) | [Natively](https://www.buildnatively.com/bubble2app) |
+| Bubble 계열 네이티브 빌더 폐업 선례 존재(Dropsource, 2020) → 소스 제공 후 정리 | [Dropsource 폐업 스레드](https://forum.bubble.io/t/native-app-builder-dropsource-is-shutting-down/104073) |
+
+### 페이서스 BDK 의존 3대 기능 (위험도)
+- **사진 업로드** 🟢 낮음 (File Uploader Pro Native Mobile 구독 해지함 — 라이브 미사용. Bubble 기본 업로더 추정)
+- **푸시** 🟡 중간 (OneSignal = Natively도 동일 → 재배선 수준)
+- **인앱결제** 🔴 높음 (iOS_inapp_sharedsecret + BN-Purchase = BDK 경유 추정. 핵심 난관)
+  - ✅ **안심**: 티켓 잔액은 Bubble DB(User.tickets)에 저장 → 결제 통로 바꿔도 기존 잔액 안전. 새 결제만 새 통로.
+
+### 마이그레이션 핵심 원칙
+- **같은 Bundle ID(`com.pacers.pacers`)로 "업데이트" 제출** → 기존 유저/평점/IAP SKU 유지 (새 앱 아님)
+- 앱은 대표님 본인 Apple/Google 계정 소유 → 래퍼 회사 망해도 스토어에서 안 사라짐 (관건은 "기능 작동" 여부)
+- ⚠️ **작업은 "복제본" 말고 Bubble "Dev(version-test) 버전"에서** → 배포 한 번으로 라이브 반영 (DB/유저 안 갈라짐). 복제는 백업용으로만.
+- 인앱결제는 **TestFlight/내부테스트 + 샌드박스 계정**으로만 검증 가능 (미리보기 불가)
+
+### 단계별 (무중단)
+1. Natively 답장 확인 (아래 미확인 질문) + Natively 1달 구독 테스트 빌드
+2. 라이브 앱 Dev 버전에서 IAP(RevenueCat) 재구축 + 푸시/사진 재배선
+3. TestFlight/내부테스트로 전 기능 QA (특히 결제)
+4. 검증 끝 → Bubble Dev→Live 배포 → 같은 Bundle ID로 스토어 업데이트 제출
+5. 안정 확인까지 BDK 유지 → 확인 후 BDK 해지
+
+### ⏳ Natively에 보낸 질문 (2026-06-19 발송, 답변 대기)
+1. 소비성(consumable) IAP 프로덕션 안정성 + Bubble 사례
+2. 같은 Bundle ID로 기존 리스트 업데이트 가능 여부
+3. OneSignal 기존 셋업 유지 가능 여부
+4. **런타임 서버 의존성** — Natively 서비스 중단 시 출시된 앱 계속 작동? 소스/standalone 제공?
+5. 사진/카메라 업로드 지원
+6. TestFlight 테스트 경로
+
+> 답변 받으면 이 섹션 아래에 결정사항 이어붙일 것.
+
+---
+
 ## 📋 세션 끝 프로토콜 (모든 Claude Code가 따를 규칙)
 
 ### Context 80% 도달 시 — 새 세션 권장
