@@ -30,7 +30,7 @@
 ---
 
 ## 3. 기술 스택
-- **메인**: Bubble.io (Web) + BDK Native (앱스토어 배포)
+- **메인**: Bubble.io (Web) + ~~BDK Native~~ → **Natively** (앱스토어 배포, 2026-06-19 이주 확정)
 - **구조**: SPA 기반 하이브리드 아키텍처
 - **커스텀 기능**: HTML/JS/CSS 미니 웹앱 → Vercel 배포 → 버블 HTML 엘리먼트에 iframe 삽입
 - **배포**: git push origin main → GitHub → Vercel/GitHub Actions 자동 배포
@@ -950,15 +950,19 @@ body에 `"url"` 필드 추가:
 4. 검증 끝 → Bubble Dev→Live 배포 → 같은 Bundle ID로 스토어 업데이트 제출
 5. 안정 확인까지 BDK 유지 → 확인 후 BDK 해지
 
-### ⏳ Natively에 보낸 질문 (2026-06-19 발송, 답변 대기)
-1. 소비성(consumable) IAP 프로덕션 안정성 + Bubble 사례
-2. 같은 Bundle ID로 기존 리스트 업데이트 가능 여부
-3. OneSignal 기존 셋업 유지 가능 여부
-4. **런타임 서버 의존성** — Natively 서비스 중단 시 출시된 앱 계속 작동? 소스/standalone 제공?
-5. 사진/카메라 업로드 지원
-6. TestFlight 테스트 경로
+### ✅ Natively 공식 답변 수령 (2026-06-19) — 이주 확정
 
-> 답변 받으면 이 섹션 아래에 결정사항 이어붙일 것.
+| 질문 | 답변 | 판정 |
+|------|------|------|
+| 소비성 IAP (티켓) | "one-time purchases, including consumables" 지원 확인 | ✅ |
+| 기존 Bundle ID 유지 | com.pacers.pacers로 업데이트 제출 가능 → 유저/리뷰/SKU 유지 | ✅ |
+| OneSignal 푸시 | "minimal friction" — 기존 셋업 유지 가능 | ✅ |
+| 런타임 의존성 | IAP → RevenueCat, 푸시 → OneSignal. 구독 체크만 Natively 서버 경유 (페이서스는 소비성만 쓰므로 해당 없음) | ✅ |
+| 소스코드 | 제공 불가 (proprietary) | ⚠️ 감수 |
+| 사진/카메라 | "fully supports native camera access" | ✅ |
+| 테스트 경로 | TestFlight + Google Play Console 내부테스트 | ✅ |
+
+**결론: Natively 이주 확정. 모든 검증 완료.**
 
 ### 📍 진행 현황 (2026-06-19): Natively 사실상 확정 + RevenueCat 셋업 완료
 
