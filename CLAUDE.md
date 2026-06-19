@@ -1592,3 +1592,162 @@ Vercel 배포 확인
 4. 중요 코드는 fresh-context review 요청
 5. Context 80% 도달 시 새 세션 시작
 
+---
+
+## § 26: Natively 셋업 완전 체크리스트 (다음 세션 시작점)
+
+> 대표님이 Natively 대시보드 열면 이 체크리스트대로만 하면 됨.
+> Natively 14일 Preview 중 → 구독 전 셋업 완료 → 구독 후 빌드 주문
+
+### A. Appearance (외형) — 빠르게 넘기기
+
+| 항목 | 값 | 비고 |
+|------|------|------|
+| App Icon | `~/pacers/screenshots/Pacers 로고_블랙_ 1024 x 1024 px.png` | 기존 아이콘 그대로 (AI 생성 ❌) |
+| Loading Screen | 블랙 배경 유지 | 건드리지 말 것 |
+| Launch Screen | 기존 스플래시 유지 | |
+| Style / Bottom Bar | 건드리지 말 것 | 디자인 변경 없음 |
+
+### B. Settings — ⭐ 제일 중요 (마이그레이션 핵심)
+
+| 항목 | 값 |
+|------|------|
+| **App URL (웹 URL)** | `https://pacers.kr` |
+| **Bundle ID (iOS)** | `com.pacers.pacers` ← 기존 앱과 동일해야 함! |
+| **Package Name (Android)** | `com.pacers.pacers` ← 동일! |
+| App Name | 페이서스 |
+
+> ⚠️ Bundle ID / Package Name이 기존과 다르면 → 새 앱으로 인식 → 1,079명 유저 못 이어받음. 반드시 `com.pacers.pacers` 확인.
+
+### C. Features — In-app Purchases (RevenueCat)
+
+| 항목 | 값 | 위치 |
+|------|------|------|
+| Enable In-app Purchases | ON | Features → In-app Purchases |
+| iOS SDK Key (appl_) | RevenueCat 대시보드 → iOS 앱 → Public API Key | appl_로 시작하는 키 |
+| Android SDK Key (goog_) | RevenueCat 대시보드 → Android 앱 → Public API Key | goog_로 시작하는 키 |
+
+> RevenueCat 대시보드: app.revenuecat.com/projects/de75c31e → Apps
+
+### D. Features — Push Notifications (OneSignal)
+
+| 항목 | 값 |
+|------|------|
+| Enable Push | ON |
+| OneSignal App ID | `e610afff-b159-4c95-8f3c-ffdf86433fb1` |
+| OneSignal REST API Key | OneSignal 대시보드 → Settings → Keys & IDs → REST API Key |
+
+### E. Publish — 빌드 주문
+
+```
+1. iOS: App Store Connect 인증서/프로비저닝 필요
+   → 대표님 Apple 계정으로 Export (.p12 + 프로비저닝)
+2. Android: keystore 필요
+   → 기존 BDK 빌드 때 쓰던 keystore (같은 Bundle ID = 같은 keystore 필요)
+3. "Order Build" → Natively가 빌드
+4. TestFlight / 내부테스트로 검증
+5. 검증 완료 → 스토어 업데이트 제출 (같은 Bundle ID = 업데이트로 인식)
+```
+
+> ⚠️ Android keystore: BDK 앱과 같은 keystore 파일(.jks) + alias + 비밀번호 필요. 다른 keystore 쓰면 스토어에서 거부됨 (서명 불일치). BDK 대시보드나 대표님 파일에서 확인 필요.
+
+---
+
+## § 27: Bubble RevenueCat 워크플로우 설계서
+
+> Natively 빌드 완료 후 Bubble Dev에서 구현할 워크플로우 전체 설계.
+> BDK `BN-Purchase` 액션 → Natively `Purchase Package` 액션으로 교체.
+
+### 전체 흐름
+
+```
+[유저] "같이 달려요" / "티켓 충전" 버튼 탭
+  ↓
+[Bubble] Set Customer ID (Natively 액션)
+  ↓
+[Bubble] Purchase Package (Natively 액션)
+  ↓
+[네이티브] StoreKit(iOS) / Play Billing(안드) 결제창
+  ↓
+[RevenueCat] 결제 검증
+  ↓
+🔒 [RevenueCat → Bubble webhook] 티켓 지급 (보안 필수!)
+  ↓
+[Bubble] User.tickets += N
+  ↓
+[JS 콜백] UI 갱신 (선택)
+```
+
+### Step 1: Set Customer ID (로그인 시 1회)
+
+```
+위치: 01_main Page is loaded (or 로그인 완료 시점)
+액션: Natively "Set Customer ID"
+  - Customer ID = Current User's unique id (버블 user ID)
+  - Only when: Current User is logged in
+```
+
+> 왜 필요: RevenueCat이 유저별 구매 이력 추적하려면 ID 연결 필수.
+
+### Step 2: Purchase Package (구매 버튼)
+
+```
+위치: 티켓 충전 페이지 / 구매 버튼 클릭 워크플로우
+액션: Natively "Purchase Package"
+  - Package ID = "com.pacers.pacers.XXX" (티켓 상품별)
+    예: 12티켓 = com.pacers.pacers.12
+        50티켓 = com.pacers.pacers.50
+        ...
+  - Offering ID = RevenueCat 대시보드 Offerings 값
+```
+
+### Step 3: 🔒 RevenueCat Webhook → 티켓 지급 (보안 핵심)
+
+```
+RevenueCat 대시보드 → Integrations → Webhooks
+  → Endpoint URL: https://pacers.kr/api/1.1/wf/revenuecat_webhook
+  → Authorization Header: Bearer [BUBBLE_API_TOKEN]
+
+Bubble 백엔드 API 워크플로우 신규 생성:
+이름: revenuecat_webhook
+파라미터:
+  - event_type (text) — "INITIAL_PURCHASE" / "NON_SUBSCRIPTION_PURCHASE"
+  - product_id (text) — "com.pacers.pacers.12" 등
+  - app_user_id (text) — 버블 User unique id
+
+Step 1 (Only when event_type = "INITIAL_PURCHASE" or "NON_SUBSCRIPTION_PURCHASE"):
+  - Search Users where unique id = app_user_id → first item
+  - Make changes: tickets += [product_id에 따른 티켓 수]
+```
+
+**티켓 수량 매핑 (product_id → 티켓)**
+
+| Product ID | 티켓 수 |
+|---|---|
+| com.pacers.pacers.12 | 12 |
+| com.pacers.pacers.30 | 30 |
+| com.pacers.pacers.50 | 50 |
+| com.pacers.pacers.100 | 100 |
+| com.pacers.pacers.200 | 200 |
+| com.pacers.pacers.500 | 500 |
+| com.pacers.pacers.700 | 700 |
+| com.pacers.pacers.1000 | 1000 |
+
+> ⚠️ **보안 필수**: 티켓 지급은 반드시 webhook으로만. JS Purchase 콜백만 믿으면 유저가 콜백 조작해서 공짜 티켓 가능 (해킹). BDK 때도 원래 이렇게 해야 맞음.
+
+### Step 4: 구매 완료 UI 갱신 (선택)
+
+```
+Natively "Purchase Success" 이벤트 → 버블 워크플로우
+  → Show alert "티켓이 충전됐어요!"
+  → Refresh 티켓 잔액 표시
+```
+
+### ⚠️ TestFlight/내부테스트에서만 결제 검증 가능
+
+```
+샌드박스 계정으로 테스트 → RevenueCat 샌드박스 로그 확인
+→ 실제 돈 안 빠짐
+→ webhook 정상 수신 확인 후 → 라이브 제출
+```
+
