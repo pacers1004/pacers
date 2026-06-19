@@ -1,72 +1,47 @@
-# 🎯 PACERS 온보딩 프롬프트
+# 🎯 PACERS 온보딩
 
-**새로운 Claude Code 또는 협업자가 이 프로젝트에 들어올 때, 아래 프롬프트를 복사해서 새 창에서 실행하세요.**
+**새 Claude Code 세션이 이 파일을 읽으면 아래 순서대로 실행합니다.**
 
 ---
 
-```
+## Claude Code에게 — 시작 지시
+
 페이서스(Pacers) 프로젝트의 수석 개발자로 일해줘.
 
-먼저 이 3개 파일을 순서대로 읽으세요:
+아래 3개 파일을 순서대로 읽어:
 
-1️⃣ README.md — 프로젝트 구조 및 네비게이션
-2️⃣ CLAUDE.md — 기술 스택, Feature 01~03, 작업 이력 전체
-3️⃣ CHANGELOG.md — 최근 작업 타임라인 (날짜순)
+1️⃣ `~/pacers/README.md` — 프로젝트 구조 개요  
+2️⃣ `~/pacers/CLAUDE.md` — 기술 스택, Feature 01~04, 개발환경, 전체 작업 이력  
+3️⃣ `~/pacers/CHANGELOG.md` — 최근 작업 타임라인 (날짜순, 최신 것부터)
 
-그 다음 메모리가 자동 로드됩니다:
-- MEMORY.md: 계정 구조, 원칙, 버그 히스토리
-- work-log.md: 현재 세션 세부 사항
+다 읽으면 "준비됐어요" 라고 말해줘.
 
-모든 준비가 끝나면 "준비됐어요. 다음 작업이 뭐예요?"라고 말해줘.
+---
+
+## 사용법 (대표님용)
+
+새 Claude Code 창에서 한 줄만 입력:
+
+```
+~/pacers/ONBOARDING.md 읽어
 ```
 
----
-
-## 💡 사용 방법
-
-### 새로운 Claude Code 온보딩
-
-1. **이 페이서스 폴더를 열기**
-2. **이 파일(ONBOARDING.md)의 프롬프트 복사**
-3. **새 Claude Code 창에서 프롬프트 붙여넣기**
-4. Claude Code가 3개 파일을 읽고 "준비됐어요"라고 말할 때까지 기다림
-5. 그 다음 "다음 작업이 뭐예요?"라고 물으면 됨
-
-### 협업자 추가
-
-1. `git clone https://github.com/pacers1004/pacers.git`
-2. ONBOARDING.md 열기
-3. 프롬프트 복사 → Claude Code 붙여넣기
-4. 끝!
+끝. Claude Code가 알아서 3개 파일 읽고 준비됩니다.
 
 ---
 
-## ⏱️ 소요 시간
+## 핵심 환경 정보 (빠른 참고)
 
-- README.md 읽기: 2분
-- CLAUDE.md 읽기: 5분
-- CHANGELOG.md 읽기: 2분
-- 메모리 로드: 자동
-- **총 9분 안에 완전 온보드** ✅
+| 항목 | 값 |
+|------|-----|
+| Vercel CLI | `~/.npm-global/bin/vercel` (v54.14.2) |
+| Vercel 로그인 | `bimhara-9117` (유지됨) |
+| Node.js | v24.17.0 |
+| Python | 3.14.6 |
+| 배포 명령 | `cd ~/weather-app && ~/.npm-global/bin/vercel --prod --yes` |
 
----
-
-## 📚 구조 설명
-
-| 파일 | 목적 | 읽는 시간 |
-|------|------|---------|
-| README.md | 진입점 + 네비게이션 | 2분 |
-| CLAUDE.md | Single Source of Truth | 5분 |
-| CHANGELOG.md | 작업 이력 타임라인 | 2분 |
-| 메모리 (자동) | 계정, 원칙, 버그 히스토리 | 자동 |
+> 상세 개발환경 → `CLAUDE.md § 3-B`
 
 ---
 
-**언제 이 파일을 보나?**
-- 새 Claude Code가 페이서스 작업 시작할 때
-- 새 협업자 추가할 때
-- 다른 환경(노트북, 팀원)에서 작업할 때
-
----
-
-**마지막 업데이트**: 2026-06-18 by Claude Code
+**마지막 업데이트**: 2026-06-19 by Claude Code (VS Code)
