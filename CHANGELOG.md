@@ -5,6 +5,48 @@
 
 ---
 
+## 📅 2026-06-19 | Claude Code — Natively 답변 확정 + Feature 05 첫인상 기획
+
+### ✅ Natively 공식 답변 수령 → 이주 확정
+- 소비성 IAP(티켓) ✅ / Bundle ID 유지 ✅ / OneSignal ✅ / 카메라 ✅
+- 런타임 의존성: 구독 체크만 Natively 서버 → 페이서스는 소비성만 쓰므로 해당 없음
+- **결론: Natively 이주 확정. 단, BDK 정상 작동 중이므로 급하지 않음 → Feature 05 먼저**
+- CLAUDE.md §19 업데이트 (답변 확인표로 교체)
+
+### ✅ Feature 05 — Daily Pacer 첫인상 보내기 기획 확정
+- **기획**: 티켓 없이 상대에게 첫인상 전달 → 상호 시 "같이 달려볼까요?" 표시
+- **DB 설계 확정**: `PacerImpression` 타입 (sender/receiver/impression/created_date/is_mutual)
+- **리셋**: 데일리 카드 정오 사이클과 동일 → 별도 로직 불필요
+- **다음 세션**: 버블에서 타입 생성 + 워크플로우 구현
+- CLAUDE.md §28 전면 재작성 (투표→첫인상 보내기로 기획 변경)
+- CLAUDE.md §2 파이프라인에 Feature 05 추가
+
+---
+
+## 📅 2026-06-19 | Cowork — BDK→Natively 이주 확정 + Feature 05 기획
+
+### ✅ BDK → Natively 이주 전략 확정
+- Natively 팀 규모 조사: 5인 우크라이나 팀, 9,500+ 앱 (BDK보다 훨씬 적극 운영)
+- Natively 공식 답변 수령: 소비성 IAP ✅ / Bundle ID 유지 ✅ / OneSignal ✅
+- **결정**: Natively 먼저 이주 → 문제 시 Capacitor 자체빌드로 전환
+- RevenueCat 셋업 완료: iOS appl_ 키 + Android goog_ 키 + Bubble 플러그인 Secret 키 입력 완료
+- 다음 세션: Natively 구독 → appl_/goog_ 입력 → 빌드 주문 → TestFlight QA
+
+### ✅ Feature 05 — Daily Pacer 첫인상 투표 기획 완료
+- **UI**: Bubble에 구현 완료 (⚡페이스 딱 맞겠다 / 🥇진짜 러너다 / 🔥꾸준함이 보여)
+- **MVP 플로우 확정**:
+  - 투표 → "상대방에게 첫인상을 전달했어요" (컨디셔널)
+  - 상대방도 투표 → "서로 첫인상을 보냈어요 👟 같이 달려볼까요?"
+  - 상대방에게 앱 내 알림 + 푸시 발송
+- **DB 설계 확정**: `PacerImpression` (sender/receiver/impression/created_date/is_mutual)
+- **워크플로우 설계 완료**: 프론트 6단계 + 카드 컨디셔널 2개
+- **미구현**: 버블 DB 생성 + 워크플로우 → 다음 세션에서 구현
+
+### 📝 문서화
+- `CLAUDE.md §28` 신규 추가: Feature 05 기획 내용 전체 기록
+
+---
+
 ## 📅 2026-06-19 | Claude Code (VS Code) — 개발환경 세팅 세션
 
 ### 🔧 Node.js / Python / Vercel CLI 연동 완성
