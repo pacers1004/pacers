@@ -1594,7 +1594,188 @@ Vercel 배포 확인
 
 ---
 
-## § 26: Natively 셋업 완전 체크리스트 (다음 세션 시작점)
+## § 26: Natively Bubble 플러그인 완전 레퍼런스
+
+> BDK → Natively 마이그레이션 시 버블에서 교체할 액션/이벤트 완전 목록.
+> 출처: docs.buildnatively.com (2026-06-19 확인)
+
+### A. 인앱결제 (RevenueCat) — `Natively - Purchases` 엘리먼트
+
+#### 엘리먼트 상태값 (State)
+| 상태 | 설명 |
+|------|------|
+| Latest Transaction ID | 최근 거래 ID |
+| Latest Customer ID | 현재 고객 ID |
+| Latest Error | 최근 에러 메시지 |
+| Latest GetPrice data | 최근 가격 조회 결과 |
+| Latest PurchasePackage packageId | 최근 구매한 패키지 ID |
+
+#### 액션 (Actions)
+| 액션명 | 입력값 | BDK 대체 |
+|--------|--------|----------|
+| **Set Customer ID** | Customer Identifier (= User's unique id) | BN-Purchase 사전 설정 |
+| **Purchase Package** | Package ID, Old Product ID(안드 전용), Proration mode | BN-Purchase |
+| **Reset Customer ID** | 없음 | 로그아웃 시 |
+| **Get Package Price** | Package ID | 가격 표시용 |
+| **Get Customer ID** | 없음 | 디버그용 |
+| **Show Paywall** | Offering ID (선택) | 결제창 표시 |
+| **Show Paywall if needed** | Offering ID (선택), Entitlement ID (필수) | 조건부 결제창 |
+| **Restore Purchase [iOS]** | 없음 | 구매 복원 |
+| **RevenueCat - Verify Subscription** | Customer ID, Entitlements ID | 구독 검증 |
+
+#### 이벤트 (Events)
+| 이벤트명 | 발생 시점 |
+|----------|----------|
+| **Purchase Success** | 결제 성공 → UI 갱신용 (⚠️ 티켓지급은 webhook으로!) |
+| **Purchase Failed** | 결제 실패 |
+| **Purchase Cancelled** | 유저가 취소 |
+| **Set Customer Success** | Customer ID 설정 완료 → 이때 Purchase Package 호출 |
+| **Set Customer Failed** | Customer ID 설정 실패 |
+| **Get Price Success** | 가격 조회 성공 → price, localized price, currency 반환 |
+| **Get Price Failed** | 가격 조회 실패 |
+| **Customer ID Received** | Get Customer ID 완료 |
+| **Paywall purchase success** | Paywall에서 구매 성공 |
+| **Paywall cancelled** | Paywall 닫음 |
+| **Paywall error** | Paywall 오류 |
+| **Restore Purchase Success** | 복원 성공 |
+| **Restore Purchase Failed** | 복원 실패 |
+
+#### 핵심 워크플로우 패턴
+```
+[로그인/회원가입 완료 시]
+→ Set Customer ID (Customer Identifier = Current User's unique id)
+→ Set Customer Success 이벤트 → (아무것도 안 해도 됨, 연결만 하는 것)
+
+[구매 버튼 클릭]
+→ Purchase Package (Package ID = "com.pacers.pacers.12" 등)
+→ Purchase Success 이벤트 → Show alert "충전 완료!" (UI만)
+→ ⚠️ 실제 티켓지급은 RevenueCat webhook → Bubble 백엔드 (§27 참고)
+```
+
+---
+
+### B. 푸시 알림 (OneSignal) — `Natively - Push Notifications` 엘리먼트
+
+#### 액션 (Actions)
+| 액션명 | 설명 | BDK 대체 |
+|--------|------|----------|
+| **Request the user's push notification permission** | 시스템 권한 팝업 표시 | BN-Push 권한 요청 |
+| **Get the user's OneSignal PlayerId** | Player ID 수동 갱신 | |
+| **Get the user's push notification permission status** | 권한 상태 재확인 | |
+| **Set the user's External ID** | Custom ID 연결 (= Bubble User ID) | |
+| **Remove the user's External ID** | Custom ID 해제 | |
+| **Open Settings** | 시스템 알림 설정 오픈 | |
+| **OneSignal - User Single PlayerId - Send Push** | 특정 유저 푸시 발송 | BN-Push |
+| **OneSignal - Segments - Send Push** | 세그먼트 푸시 발송 | |
+
+**OneSignal - User Single PlayerId - Send Push 입력값:**
+```
+- Title (제목)
+- Message (내용)
+- Redirect URL (딥링크 URL)
+- Template ID (선택)
+- Custom Sound (선택)
+```
+
+#### 이벤트 (Events)
+| 이벤트명 | 발생 시점 |
+|----------|----------|
+| **OneSignal Player ID Updated** | Player ID 획득 시 → DB 저장 |
+| **Permissions Authorized** | 유저가 "허용" 탭 |
+| **Permissions Denied** | 유저가 "거부" 탭 |
+| **Permission Status Updated** | 시스템 알림 설정 변경 시 |
+| **External ID Updated** | External ID 설정/변경/삭제 완료 |
+| **External ID Error** | External ID 오류 |
+
+#### 핵심 워크플로우 패턴
+```
+[앱 첫 실행 / 로그인 시]
+→ Request the user's push notification permission
+→ Permissions Authorized 이벤트
+→ Set the user's External ID (= Current User's unique id)
+→ Get the user's OneSignal PlayerId
+→ OneSignal Player ID Updated 이벤트
+→ Make changes to Current User: onesignal_subscription_id = [Player ID]
+```
+
+```
+[댓글 알림 발송 시 (기존 BN-Push 대체)]
+→ OneSignal - User Single PlayerId - Send Push
+  - Title: "새 댓글이 달렸어요 💬"
+  - Message: "[닉네임]님이 댓글을 남겼어요"
+  - Redirect URL: "https://pacers.kr/01_main?tab=cooldown_detail&cd_id=[post_id]"
+```
+
+> ⚠️ **주의**: BDK BN-Push는 서버 없이 버블 워크플로우에서 직접 발송하는 구조였음.
+> Natively도 동일 — `OneSignal - User Single PlayerId - Send Push` 액션이 버블 워크플로우에서 직접 작동.
+> 기존 BN-Push 액션 → 이 액션으로 1:1 교체 가능.
+
+---
+
+### C. 로딩/스플래시 화면 — BDK `BN-Remove-loading` 대체
+
+> ⚠️ **확인 필요 (추정)**: 공식 문서에 명시 없음. Natively 답변 받으면 업데이트.
+
+**추정 방법 1**: Natively 플러그인 Bubble 에디터에서 직접 확인
+→ "Natively" 엘리먼트 → 사용 가능한 액션 목록 확인
+
+**추정 방법 2**: JS로 대체
+```javascript
+// Natively JS SDK로 로딩 제거 (가능성)
+window.natively?.loading?.hide()
+```
+
+**BDK 때 이슈**: `BN-Remove-loading`이 간헐적으로 실패 → 안전장치로 JS fallback 추가했었음.
+Natively에서도 동일 패턴으로 대비 권장.
+
+---
+
+### D. 딥링크 — BDK 대체
+
+Natively에서 딥링크는 별도 플러그인 액션 없이:
+```
+OneSignal 푸시 "Redirect URL" 필드에 URL 직접 입력
+→ 앱이 열리면서 해당 URL로 이동
+→ 기존 pacers.kr 딥링크 구조 그대로 사용 가능
+
+예: https://pacers.kr/01_main?tab=cooldown_detail&cd_id=[post_id]
+```
+
+---
+
+### E. BDK → Natively 액션 교체 매핑표
+
+| BDK 액션 | Natively 대체 | 비고 |
+|----------|--------------|------|
+| BN-Purchase | Purchase Package | Set Customer ID 선행 필요 |
+| BN-Push (단일) | OneSignal - User Single PlayerId - Send Push | 입력 필드 동일 |
+| BN-Remove-loading | 확인 필요 (플러그인 액션 or JS) | |
+| BN-Launch-Page-Set | 없음 (Bubble Go to page 사용) | |
+| BDK 권한 요청 | Request push notification permission | |
+| BDK Player ID 저장 | OneSignal Player ID Updated 이벤트 | |
+
+---
+
+### F. 마이그레이션 순서 (Bubble Dev 버전에서)
+
+```
+1. Natively 플러그인 설치 (이미 완료 v2.30.0 ✅)
+2. 01_main 페이지에 엘리먼트 2개 추가:
+   - "Natively - Purchases" 엘리먼트
+   - "Natively - Push Notifications" 엘리먼트
+3. 로그인/회원가입 워크플로우에 추가:
+   - Set Customer ID (RevenueCat)
+   - Request push permission + Get Player ID + DB 저장 (OneSignal)
+4. 기존 BN-Push 액션 → OneSignal - User Single PlayerId - Send Push 교체
+5. 기존 BN-Purchase 액션 → Purchase Package 교체
+6. 로딩화면 제거 액션 → Natively 문서 확인 후 교체
+7. RevenueCat webhook 설정 (§27 참고)
+8. TestFlight/내부테스트로 전체 검증
+```
+
+---
+
+## § 27: Natively 대시보드 셋업 체크리스트 (다음 세션 시작점)
 
 > 대표님이 Natively 대시보드 열면 이 체크리스트대로만 하면 됨.
 > Natively 14일 Preview 중 → 구독 전 셋업 완료 → 구독 후 빌드 주문
