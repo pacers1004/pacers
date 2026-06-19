@@ -960,6 +960,71 @@ body에 `"url"` 필드 추가:
 
 > 답변 받으면 이 섹션 아래에 결정사항 이어붙일 것.
 
+### 📍 진행 현황 (2026-06-19): Natively 사실상 확정 + RevenueCat 셋업 완료
+
+대표님 결정 = **Natively로 굳혀가는 중** (소비성 IAP 실제 작동 확인됨). RevenueCat 결제 셋업 통째로 완료.
+
+**완료된 것:**
+- RevenueCat 계정·프로젝트 생성 (project: de75c31e, REST API Identifier: appd73c8e0168)
+- 티켓 상품 8종(com.pacers.pacers.12~1000) 자동 인식 → **소비성(One-Time Purchase) 확인** = 가장 큰 불확실성 해소
+- **iOS**: App Store Connect "앱 내 구입" P8 키(Key ID 62Y9BJDJQN) 업로드(Valid) → **appl_ Public 키 발급**
+- **안드**: GCP 서비스 계정 `revenuecat@pacers-456310.iam.gserviceaccount.com` 생성 + JSON 키 + Google Play Android Developer API 활성 + Play Console 권한 부여(재무데이터 보기/주문·구독 관리) → **goog_ Public 키 발급**
+- **Secret API key V1** 발급 → Bubble Natively 플러그인 `revenuecat_apiKey` 칸 입력 완료
+
+> ⚠️ 키 값 자체는 여기 안 적음(보안). RevenueCat 대시보드에서 확인. appl_/goog_=Public(저민감), Secret/서비스계정JSON=고민감(절대 노출·git 금지).
+
+**키 들어가는 위치 (헷갈리지 말 것):**
+- `appl_`(iOS) + `goog_`(안드) Public 키 → **Natively 대시보드** (Features→In-app Purchases, 플랫폼별 칸) → 빌드 주입
+- Secret V1 키 → **Bubble 플러그인** `revenuecat_apiKey` 칸 (서버사이드용)
+
+**대기/미완:**
+- ⏳ 안드 credentials "need attention" = Google 권한 전파 대기 (몇 시간~36h, 자동 초록불)
+- ⏭️ RevenueCat 이메일 인증 (배너 — 비차단, 나중에)
+- ⏭️ Google developer notifications(Pub/Sub 실시간 추적) = 선택, 나중에
+
+**다음 세션 시작점:**
+1. Natively 구독 → 대시보드에 appl_/goog_ 입력 → 빌드 주문
+2. Bubble Dev: Set Customer ID → Purchase Package → 티켓 지급 워크플로우 (match.js와 동일 Run JS 다리 불필요, Natively는 네이티브 액션 제공)
+3. 🔒 RevenueCat webhook → Bubble 백엔드 검증으로 티켓 지급 (공짜티켓 방지)
+4. TestFlight/내부테스트 결제 검증 (샌드박스)
+5. 같은 Bundle ID(com.pacers.pacers)로 스토어 업데이트 제출 → 전환 (BDK는 안정 확인까지 유지)
+
+### 🅱️ 대안 옵션: Capacitor 자체 빌드 (벤더 종속 0)
+
+Natively도 결국 외부 업체 종속. 근본 탈출구로 **Capacitor(오픈소스 래퍼)로 직접 빌드** 가능.
+
+| 옵션 | 종속 | 월비용 | 유지보수 | 난이도 |
+|------|------|--------|----------|--------|
+| Natively 이주 | 있음(Natively) | $32 | 업체 | 중 |
+| **Capacitor 자체빌드** | **없음** | **$0** | 대표님+Claude(세션기반) | 높 |
+| BDK 잔류 | 있음(방치) | ? | 안 됨 | - |
+
+**Capacitor 구조:**
+- `server.url = pacers.kr` 설정 → BDK처럼 원격 버블앱 로드
+- 플러그인: 푸시(FCM/OneSignal), 인앱결제(RevenueCat 공식 Capacitor 플러그인), 카메라, 딥링크
+- Claude가 대표님 Mac(Xcode/Android Studio)에서 CLI 빌드 가능
+- 장점: 벤더 종속 0, 월비용 0, "회사 망함" 리스크 0, 소스 대표님 소유
+- 단점: 유지보수가 대표님+Claude(세션기반)로 옴, OS 업뎃마다 재빌드. 서명/인증/제출은 대표님 손 필요(보안)
+- ⚠️ 원격 URL + 플러그인 JS 전역 노출 = 빌드 시 실제 검증 필요 (단정 X)
+
+### 🔑 인앱결제 — BDK 플러그인 없이 연결하는 법 (핵심 기술)
+
+BDK 빼면 BN-Purchase 액션이 사라짐. 해결 = **대표님이 이미 쓰는 Toolbox Run JS 다리** (match.js 매칭과 동일 패턴).
+
+```
+[버블] 티켓 구매 그룹/버튼 클릭
+  → 워크플로우 → Toolbox "Run Javascript"
+  → Capacitor RevenueCat 플러그인 호출: Purchases.purchasePackage(...)
+[네이티브] StoreKit(iOS)/Play Billing(안드) 결제창 자동
+  → 결제 완료 → RevenueCat 검증
+[보안 필수] RevenueCat webhook → Bubble 백엔드 API → User.tickets += N
+[JS 콜백] bubble_fn_purchase_done → JavascriptToBubble → UI 갱신
+```
+
+- 원리: Capacitor가 WebView에 `window.Capacitor` 다리 주입 → 버블 JS에서 네이티브 결제 직접 호출. BDK 플러그인은 이 다리를 버블 액션으로 "포장"한 것뿐.
+- ⚠️ **보안 필수**: 티켓 지급은 반드시 **RevenueCat webhook → 백엔드 검증**으로. JS 콜백만 믿으면 유저가 콜백 조작해서 공짜 티켓 획득 가능(해킹). BDK 쓰든 안 쓰든 원래 이렇게 해야 맞음.
+- 동일 다리 패턴 선례: Daily Pacer 매칭(§Feature 03, Toolbox Run JS → bubble_fn_match_result).
+
 ---
 
 ## 📋 세션 끝 프로토콜 (모든 Claude Code가 따를 규칙)
