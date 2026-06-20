@@ -1013,9 +1013,14 @@ body에 `"url"` 필드 추가:
 - ⏭️ RevenueCat 이메일 인증 (배너 — 비차단, 나중에)
 - ⏭️ Google developer notifications(Pub/Sub 실시간 추적) = 선택, 나중에
 
-**다음 세션 시작점:**
-1. Natively 구독 → 대시보드에 appl_/goog_ 입력 → 빌드 주문
-2. Bubble Dev: Set Customer ID → Purchase Package → 티켓 지급 워크플로우 (match.js와 동일 Run JS 다리 불필요, Natively는 네이티브 액션 제공)
+**진행 현황 (2026-06-20 업데이트): Natively 대시보드 셋업 전체 완료 ✅**
+- Appearance / Features / Settings / Deeplinks 전부 설정 완료 (상세는 §29 참고)
+- appl_/goog_ Public 키 입력, Bundle ID `com.pacers.pacers` 확인, iPad ON 유지
+- 남은 것: 요금제 구독(Unlimited 트라이얼 권장) → 빌드 주문 → 🔴 Bubble Dev 배선
+
+**다음 세션 시작점 (= 🔴 Bubble Dev 배선이 본게임):**
+1. Natively 구독(Unlimited 14일 트라이얼) → 빌드 1회 주문 → 스플래시 지옥 탈출 확인 + TestFlight/내부테스트 설치
+2. Bubble Dev: Set Customer ID → Purchase Package → 티켓 지급 워크플로우 (Natively 네이티브 액션 제공)
 3. 🔒 RevenueCat webhook → Bubble 백엔드 검증으로 티켓 지급 (공짜티켓 방지)
 4. TestFlight/내부테스트 결제 검증 (샌드박스)
 5. 같은 Bundle ID(com.pacers.pacers)로 스토어 업데이트 제출 → 전환 (BDK는 안정 확인까지 유지)
@@ -2157,14 +2162,48 @@ window.fireImpression = function (emoji) {
 - 애니메이션 jank 버그 수정: `body.imp-firing` pre-hide 패턴으로 flash 제거
 - Bubble Live 릴리즈 완료 ✅
 
-### ⏳ 미해결 / 추후 작업
+**Natively 대시보드 셋업 — 전체 완료 ✅ (BDK 스플래시 지옥 탈출 목적)**
+> 동기: BDK 콜드스타트 흰 화면/스플래시 버그가 BDK 레벨이라 수정 불가 → Natively 이주 가속
 
-**BDK → Natively 이주** (§19 참고)
-- RevenueCat 셋업 완료, 빌드 주문 대기 중
-- iOS keystore / Android keystore 확인 필요
+**Appearance**: 앱 아이콘/스플래시 기존 유지 (디자인 변경 없음). Bottom Bar OFF (버블 자체 하단탭 있음 → 중복 방지)
+
+**Settings**:
+- App Url: `https://pacers.kr/00_sign_up_sign_in_step1_page`
+- Bundle ID: `com.pacers.pacers` (기존과 동일 — 유저/리뷰/IAP 유지 핵심)
+- Primary Language: Korean / App Name: `pacers` + Korean 번역 `페이서스` 추가
+- **iPad support: ON 유지 (필수)** — BDK 빌드 때 iPad 지원함 → Apple QA1623 정책상 새 빌드에서 못 끔 (validation error). 끄면 업로드 거부됨
+- Continual Network Check: ON / Reload WebView: OFF
+- Internal URLs: `pacers.kr/...` 필수 유지. paypal/stripe 도메인은 Natively 기본 템플릿 잔재(페이서스 미사용, RevenueCat 네이티브 결제 씀) → 무해, 나중에 정리 가능
+
+**Features**:
+- Notifications (OneSignal): ON — App ID `e610afff-...`
+- In-App Purchases (RevenueCat): ON — appl_/goog_ Public 키 입력
+- Photo Library: ON (프로필/쿨다운/데일리크루/뱃지인증 4곳 업로드 사용)
+- Pull to Refresh: ON (현재 페이지 유지됨 확인)
+- Deeplinks (Universal Links): `pacers.kr` 추가 + Save. Branch 탭 Skip(ChottuLink 사용 중)
+- Service Worker: ON — Domain `pacers.kr` (도메인만, path/https 제외). 콜드스타트 캐싱 가속
+- Apple ATT: **OFF** — 페이서스 광고/인앱분석(Amplitude 등) 미사용 → 불필요. Apple 심사 거부 시에만 켜기
+- Admob / Analytics(Facebook·AppsFlyer) / Social Auth: Skip (광고·유료마케팅 시작 시 추가)
+- Microphone: OFF
+
+**요금제**: Unlimited($32/월, 재빌드 무제한) 14일 무료 트라이얼 추천 — RevenueCat(All Native Features) 포함 확인 + 빌드 여러 번 필요. 검증 후 Essential($12, 빌드 4회 제한+초과 $9/회) 다운그레이드 검토 가능
+
+**keystore 오해 정정**: Google Play App Signing이 서명 키 관리 → 같은 Package Name으로 새 APK 올리면 Google이 동일 키로 서명 → 유저 그대로. keystore 파일 별도 준비 불필요(Natively 빌드 화면이 요구하는 것만 따르면 됨)
+
+### ⏳ 다음 세션 시작점 — 🔴 Bubble Dev 배선 (진짜 본게임)
+
+> 대시보드 설정은 "껍데기". 실제 작동은 버블에서 배선해야 함. §26·§27 설계서 참고.
+
+1. **빌드 1회 주문** (iOS/Android) → 스플래시 지옥 탈출 확인 + TestFlight/내부테스트 설치
+2. 🔴 **RevenueCat 결제 배선**: BDK `BN-Purchase` → Natively `Purchase Package` 교체. 로그인 시 `Set Customer ID`. 🔒 티켓 지급은 반드시 RevenueCat webhook → Bubble 백엔드(`revenuecat_webhook`)로 (JS 콜백만 믿으면 공짜티켓 해킹). §27 매핑표 참고
+3. 🟡 **OneSignal 푸시 배선**: BDK `BN-Push` → Natively `OneSignal - User Single PlayerId - Send Push` 교체. 기존 Redirect URL 그대로 (쿨다운 댓글/채팅/알림탭). §26-B 참고
+4. 🟡 **스플래시/로딩**: BDK `BN-Remove-loading` → Natively `Set Error Handler`(Natively - Device) 교체 (TestFlight 검증 필수)
+5. 🔴 **샌드박스 결제 검증**: TestFlight/내부테스트 + 샌드박스 계정으로 티켓 충전 E2E 테스트
+6. 검증 완료 → 같은 Bundle ID로 스토어 업데이트 제출 → 전환 (BDK는 안정 확인까지 유지)
 
 **미해결 버그 (이전 세션에서 이어짐)**
 - iOS 키보드 + 댓글 입력창 문제 (Growth 플랜 업그레이드 시 해결)
 - 날씨 카드(card.html) 좌표 업데이트 안 됨 (§18 참고)
-- Android 콜드 스타트 흰 화면 (BDK 레벨 버그)
+- Android 콜드 스타트 흰 화면 (BDK 레벨 버그 → Natively 이주로 해소 기대)
+- Android 버블 하단탭이 안드 백버튼/네비바 가림 → `body { padding-bottom: env(safe-area-inset-bottom); }` (버블 01_main HTML 헤더, 추후)
 
