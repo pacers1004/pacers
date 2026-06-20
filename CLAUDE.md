@@ -1,5 +1,7 @@
 # PACERS 프로젝트 마스터 문서
 
+> 디자인 원칙 → [`DESIGN.md`](./DESIGN.md) 참고
+
 ## 1. 프로젝트 정체성
 - **서비스명**: 페이서스(Pacers) — 러닝메이트 매칭 및 소셜 러닝 플랫폼
 - **핵심 철학**: "멀리, 빨리 뛰는 법보다 오늘도 운동화를 다시 신는 법을 제안합니다."
@@ -18,7 +20,7 @@
 | 02 | Cooldown Auto Post (쿨다운 자동 게시) | `~/cooldown-scheduler` | `pacers1004/cooldown-scheduler` | cron-job.org + Vercel | ✅ 라이브 |
 | 03 | Daily Pacer 매칭 스코어 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ✅ 라이브 |
 | 04 | 자동 모니터링 & Slack 알림 | `~/weather-app` | `pacers1004/weather-app` | Vercel + cron-job.org | ✅ 라이브 |
-| 05 | Daily Pacer 첫인상 보내기 | 버블 전용 (Vercel 불필요) | — | Bubble 내 구현 | 🔜 기획 확정, 구현 예정 |
+| 05 | Daily Pacer 첫인상 보내기 | 버블 전용 (Vercel 불필요) | — | Bubble 내 구현 | ✅ 라이브 (2026-06-20) |
 
 ### 네이밍 컨벤션
 - **로컬**: `~/[feature-slug]/`
@@ -274,6 +276,19 @@ vercel --prod
 | OneSignal 푸시 알림 | `https://pacers.kr/01_main?tab=...` 직접 사용 (BDK 웹뷰가 처리) |
 | 소셜 공유 / 외부 링크 | `pacers.chottu.link` URL 사용 (앱 미설치 케이스 처리됨) |
 | 이메일 / SMS 마케팅 | `pacers.chottu.link` URL 사용 권장 |
+
+#### ✅ 푸시 알림 딥링크 현황 (2026-06-20 전체 완료)
+
+| 알림 종류 | Deeplink URL | 방식 |
+|----------|-------------|------|
+| 쿨다운 댓글 | `https://pacers.kr/01_main?tab=cooldown_detail&cd_id=[post unique id]` | 게시글 직진 |
+| 데일리카드 (1대1 호감) | `https://pacers.kr/01_main?tab=notibell` | 알림탭 |
+| 데일리크루 (크루 호감) | `https://pacers.kr/04_chat_detail_page/[ChatRoom unique id]` | 채팅방 직진 |
+| 채팅룸 | `https://pacers.kr/04_chat_detail_page/[ChatRoom unique id]` | 채팅방 직진 |
+| 오픈런 신청 | `https://pacers.kr/01_main?tab=notibell` | 알림탭 |
+| 매거진 (1대1 호감) | `https://pacers.kr/01_main?tab=notibell` | 알림탭 |
+
+> 이전: 모든 알림 → 메인 홈으로 낙하 → 현재: 맥락에 맞는 화면으로 직진
 
 ### 앱 URL 구조 (SPA) — 푸시 딥링크 핵심
 페이서스는 `01_main` **단일 페이지 SPA** 구조다. 버블 Web Pages에 여러 페이지가 있지만 실제 앱은 `01_main` 하나만 사용한다. 탭 이동/상세 진입 시 페이지 로드 없이 `?tab=` 파라미터만 바뀐다. 버블 내부에서는 각 탭 그룹(`01_Home_tab`, `04_Chatting_tab` 등)의 Conditional로 `01_main's current_tab is [값]` 조건으로 노출을 제어한다.
@@ -825,10 +840,11 @@ body에 `"url"` 필드 추가:
   - 이유: 기존 Notification 로직 재활용, 파라미터 복잡도 감소, 안정성 증대
 
 **채팅 푸시 전략 수립**
-- 원래: 04_chat_detail_page로 채팅방 직진 → 스플래시 멈춤
-- **Plan B (성공)**: 채팅 목록으로 진입
-  - Daily Pacer: `https://pacers.kr/01_main?tab=chatting&chat_tab=Daily%20Pacer`
-  - Daily Crew: `https://pacers.kr/01_main?tab=chatting&chat_tab=Daily%20Crew`
+- 원래 실패 원인: URL 오류 (SPA 문제 아님 — 04_chat_detail_page는 01_main과 별개 페이지라 SPA 제약 없음)
+- **✅ 확정**: `https://pacers.kr/04_chat_detail_page/[ChatRoom's unique id]` 직진
+  - Daily Pacer 예시: `https://pacers.kr/04_chat_detail_page/1777532269044x173097868402442900`
+  - Daily Crew 예시: `https://pacers.kr/04_chat_detail_page/1776308775999x109065605939086880`
+  - 버블 워크플로우에서: `https://pacers.kr/04_chat_detail_page/[This ChatRoom's unique id]`
 
 **모든 푸시 알림탭 통일 전략 확정**
 - 쿨다운: BN Push 딥링크 (게시글 직진) → 유지
@@ -1612,7 +1628,34 @@ Vercel 배포 확인
 ## § 26: Natively Bubble 플러그인 완전 레퍼런스
 
 > BDK → Natively 마이그레이션 시 버블에서 교체할 액션/이벤트 완전 목록.
-> 출처: docs.buildnatively.com (2026-06-19 확인)
+> 출처: 버블 에디터 플러그인 직접 확인 (2026-06-20) — 문서 기반이 아닌 실제 설치된 플러그인 기준
+
+### 전체 엘리먼트 목록 (버블 에디터 확인)
+
+| 엘리먼트 | 용도 | 페이서스 사용 |
+|----------|------|-------------|
+| **Natively - Push Notifications (OneSignal)** | 푸시 알림 | ✅ 핵심 |
+| **Natively - Purchases** | RevenueCat 인앱결제 | ✅ 핵심 |
+| **Natively - Device** | 앱 정보/로딩/에러 핸들링 | ✅ 핵심 (스플래시 대체) |
+| Natively - SMS/Email | SMS/이메일 발송 | 미사용 |
+| Natively - Storage | 기기 로컬 저장소 | 필요시 |
+| Natively - Biometrics | Face ID / Touch ID | 미사용 |
+| Natively - Date Picker | 네이티브 날짜 선택 | 미사용 |
+| Natively - Camera | 카메라 접근 | 프로필 사진 |
+| Natively - Scanner | QR/바코드 스캐너 | 미사용 |
+| Natively - Location | GPS 위치 | 미사용 (버블 home_address 사용) |
+| Natively - Browser | 인앱 브라우저 | 미사용 |
+| Natively - ATT | iOS App Tracking Transparency | ✅ iOS 필수 |
+| Natively - Apple Sign In | 애플 로그인 | 미사용 |
+| Natively - Audio Player | 오디오 재생 | 미사용 |
+| Natively - Clipboard | 클립보드 | 미사용 |
+| Natively - NFC | NFC 태그 | 미사용 |
+| Natively - HealthKit BASE/SLEEP/ACTIVITY/WORKOUTS | 건강 데이터 | 미사용 |
+| Natively - Admob Banner/Interstitial | 광고 | 미사용 (향후 수익화) |
+| Natively - Localization | 다국어 | 미사용 |
+| [DEPRECATED] Natively - Contacts (구) | 연락처 (구버전) | 사용 금지 |
+| [DEPRECATED] Natively - Push Notifications (Klaviyo) | Klaviyo 푸시 | 사용 금지 |
+| Natively - Push Notifications (Firebase) | Firebase 푸시 | 미사용 (OneSignal 사용) |
 
 ### A. 인앱결제 (RevenueCat) — `Natively - Purchases` 엘리먼트
 
@@ -1729,19 +1772,27 @@ Vercel 배포 확인
 
 ### C. 로딩/스플래시 화면 — BDK `BN-Remove-loading` 대체
 
-> ⚠️ **확인 필요 (추정)**: 공식 문서에 명시 없음. Natively 답변 받으면 업데이트.
+> ✅ **버블 에디터 직접 확인 (2026-06-20)**
 
-**추정 방법 1**: Natively 플러그인 Bubble 에디터에서 직접 확인
-→ "Natively" 엘리먼트 → 사용 가능한 액션 목록 확인
+**`Natively - Device` 엘리먼트 액션:**
+- `Refresh App Info` — 앱 정보 갱신
+- `Show Error Screen` — 에러 화면 표시
+- `Set Error Handler` — ⭐ **BN-Remove-loading 대체 유력 후보**
 
-**추정 방법 2**: JS로 대체
-```javascript
-// Natively JS SDK로 로딩 제거 (가능성)
+**적용 방법 (추정, 실제 테스트 필요):**
+```
+기존 BDK: BN-Remove-loading 액션
+→ Natively: Set Error Handler (Natively - Device) 액션
+
+또는 JS fallback:
 window.natively?.loading?.hide()
 ```
 
+**이벤트:**
+- `A Natively - Device App Info Received` — Refresh App Info 후 발생
+
 **BDK 때 이슈**: `BN-Remove-loading`이 간헐적으로 실패 → 안전장치로 JS fallback 추가했었음.
-Natively에서도 동일 패턴으로 대비 권장.
+Natively에서도 동일 패턴 대비 권장. `Set Error Handler` 실제 동작은 TestFlight에서 검증 필요.
 
 ---
 
@@ -1762,12 +1813,13 @@ OneSignal 푸시 "Redirect URL" 필드에 URL 직접 입력
 
 | BDK 액션 | Natively 대체 | 비고 |
 |----------|--------------|------|
-| BN-Purchase | Purchase Package | Set Customer ID 선행 필요 |
+| BN-Purchase | Purchase Package (Natively - Purchases) | Set Customer ID 선행 필요 |
 | BN-Push (단일) | OneSignal - User Single PlayerId - Send Push | 입력 필드 동일 |
-| BN-Remove-loading | 확인 필요 (플러그인 액션 or JS) | |
+| BN-Remove-loading | Set Error Handler (Natively - Device) | TestFlight에서 검증 필요 |
 | BN-Launch-Page-Set | 없음 (Bubble Go to page 사용) | |
-| BDK 권한 요청 | Request push notification permission | |
-| BDK Player ID 저장 | OneSignal Player ID Updated 이벤트 | |
+| BDK 권한 요청 | Request The User's Push Notification Permission | |
+| BDK Player ID 저장 | OneSignal Player ID Updated 이벤트 → DB 저장 | |
+| BDK ATT (없었음) | Natively - ATT 엘리먼트 | iOS 14+ 필수 (광고 추적 동의) |
 
 ---
 
@@ -1775,17 +1827,19 @@ OneSignal 푸시 "Redirect URL" 필드에 URL 직접 입력
 
 ```
 1. Natively 플러그인 설치 (이미 완료 v2.30.0 ✅)
-2. 01_main 페이지에 엘리먼트 2개 추가:
+2. 01_main 페이지에 엘리먼트 추가:
    - "Natively - Purchases" 엘리먼트
-   - "Natively - Push Notifications" 엘리먼트
+   - "Natively - Push Notifications (OneSignal)" 엘리먼트
+   - "Natively - Device" 엘리먼트 (로딩/에러 핸들링)
+   - "Natively - ATT" 엘리먼트 (iOS 추적 동의 — 광고 미사용이어도 추가 권장)
 3. 로그인/회원가입 워크플로우에 추가:
    - Set Customer ID (RevenueCat)
    - Request push permission + Get Player ID + DB 저장 (OneSignal)
 4. 기존 BN-Push 액션 → OneSignal - User Single PlayerId - Send Push 교체
 5. 기존 BN-Purchase 액션 → Purchase Package 교체
-6. 로딩화면 제거 액션 → Natively 문서 확인 후 교체
+6. BN-Remove-loading → Set Error Handler (Natively - Device) 교체 (TestFlight 검증 필수)
 7. RevenueCat webhook 설정 (§27 참고)
-8. TestFlight/내부테스트로 전체 검증
+8. TestFlight/내부테스트로 전체 검증 (결제 + 푸시 + 스플래시)
 ```
 
 ---
@@ -1949,9 +2003,9 @@ Natively "Purchase Success" 이벤트 → 버블 워크플로우
 
 ---
 
-## § 28: Feature 05 — Daily Pacer 첫인상 보내기 (2026-06-19 기획 확정)
+## § 28: Feature 05 — Daily Pacer 첫인상 보내기 (2026-06-20 라이브)
 
-> **상태**: UI 있음 (Bubble 에디터) / DB + 워크플로우 미구현 → 다음 세션에서 구현
+> **상태**: ✅ Bubble Live 릴리즈 완료 (2026-06-20)
 
 ### 개요
 - **기능**: 티켓 없이 상대 페이서에게 첫인상을 보내는 가벼운 상호작용
@@ -1994,14 +2048,123 @@ Natively "Purchase Success" 이벤트 → 버블 워크플로우
 - 컨디셔널 체크가 깔끔: `PacerImpressions where sender=나 AND receiver=상대 AND created_date > 오늘정오`
 - 나중에 마이페이지 "받은 첫인상" 기능 확장 용이
 
-### 다음 세션 구현 순서
-1. 버블 `PacerImpression` 타입 + 필드 5개 생성
-2. 첫인상 버튼 3개 워크플로우 (Create PacerImpression → 알림 → 푸시)
-3. 상호 여부 체크 → `is_mutual = yes` 업데이트
-4. 카드 컨디셔널: "전달했어요" / "서로 보냈어요 + 같이 달려볼까요?" 표시
+### 구현 완료 내용 (2026-06-20)
+
+1. ✅ 버블 `PacerImpression` 타입 + 필드 5개 생성
+2. ✅ 첫인상 버튼 3개 워크플로우 (Create PacerImpression → 알림 → 푸시)
+3. ✅ 상호 여부 체크 → `is_mutual = yes` 업데이트
+4. ✅ 카드 컨디셔널: "전달했어요" / "서로 보냈어요 + 같이 달려볼까요?" 표시
+5. ✅ 버튼 탭 애니메이션 (이모지 파티클 + 슬라이드업)
+
+### 버튼 탭 애니메이션 구현 (Bubble HTML D 엘리먼트)
+
+**위치**: `grp_러너 첫인상 내부` → HTML D 엘리먼트
+
+**버튼 워크플로우 (각 버튼에 Toolbox Run Javascript 추가):**
+- ⚡ 버튼: `fireImpression('⚡');`
+- 🥇 버튼: `fireImpression('🥇');`
+- 🔥 버튼: `fireImpression('🔥');`
+
+**버블 ID 설정:** `Group 첫인상 평가 c` → ID Attribute: `imp-result`
+
+**HTML D 전체 코드:**
+```html
+<style>
+@keyframes imp-slide {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes imp-float {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-80px) scale(1.6); }
+}
+body.imp-firing #imp-result {
+  opacity: 0 !important;
+  transform: translateY(14px) scale(0.97) !important;
+}
+#imp-result.imp-show {
+  animation: imp-slide 0.7s cubic-bezier(0.0, 0.0, 0.2, 1) forwards;
+  will-change: transform, opacity;
+}
+.imp-pt {
+  position: fixed;
+  pointer-events: none;
+  font-size: 26px;
+  z-index: 9999;
+  animation: imp-float 1.1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+</style>
+<script>
+window.fireImpression = function (emoji) {
+  var cx = window.innerWidth / 2;
+  var cy = window.innerHeight * 0.55;
+  document.body.classList.add('imp-firing');
+  for (var i = 0; i < 6; i++) {
+    (function (idx) {
+      setTimeout(function () {
+        var p = document.createElement('div');
+        p.className = 'imp-pt';
+        p.textContent = emoji;
+        p.style.left = (cx + (Math.random() - 0.5) * 140) + 'px';
+        p.style.top = cy + 'px';
+        document.body.appendChild(p);
+        setTimeout(function () { p.remove(); }, 1200);
+      }, idx * 90);
+    })(i);
+  }
+  var tries = 0;
+  var timer = setInterval(function () {
+    var el = document.getElementById('imp-result');
+    if (el && el.getBoundingClientRect().width > 0) {
+      clearInterval(timer);
+      document.body.classList.remove('imp-firing');
+      el.classList.remove('imp-show');
+      void el.offsetWidth;
+      el.classList.add('imp-show');
+    }
+    if (++tries > 40) {
+      clearInterval(timer);
+      document.body.classList.remove('imp-firing');
+    }
+  }, 16);
+};
+</script>
+```
+
+**핵심 기술:**
+- `body.imp-firing #imp-result` — Bubble이 그룹을 visible로 만드는 순간 flash 방지 (pre-hide)
+- `getBoundingClientRect().width > 0` 폴링 — Bubble MutationObserver 미작동 우회
+- `void el.offsetWidth` — CSS 애니메이션 강제 리셋 (reflow 트릭)
+- 16ms 폴링 (1프레임) — 감지 즉시 애니메이션 실행
 
 ### 리텐션/수익 임팩트
 - 티켓 없는 저마찰 인터랙션 → 매일 앱 열 이유 생김 → DAU ↑
 - 첫인상 받은 상대가 "같이 달려요" 누를 확률 ↑ (워밍업 효과)
 - 매칭 성사율 ↑ → 티켓 소모 ↑ → 인앱결제 ↑
+
+---
+
+## § 29: 2026-06-20 작업 이력
+
+### ✅ 완료
+
+**Feature 05: Daily Pacer 첫인상 보내기 — 전체 구현 + 라이브 릴리즈**
+- `PacerImpression` DB 타입 + 필드 5개 (sender, receiver, impression, created_date, is_mutual)
+- 버튼 3개 워크플로우: Create PacerImpression → 알림 → OneSignal 푸시
+- 상호 여부 체크 로직 (`is_mutual = yes`)
+- 카드 컨디셔널: 내가 보냄 / 서로 보냄 분기 표시
+- 버튼 탭 애니메이션: 이모지 파티클(⚡🥇🔥) + `Group 첫인상 평가 c` 슬라이드업
+- 애니메이션 jank 버그 수정: `body.imp-firing` pre-hide 패턴으로 flash 제거
+- Bubble Live 릴리즈 완료 ✅
+
+### ⏳ 미해결 / 추후 작업
+
+**BDK → Natively 이주** (§19 참고)
+- RevenueCat 셋업 완료, 빌드 주문 대기 중
+- iOS keystore / Android keystore 확인 필요
+
+**미해결 버그 (이전 세션에서 이어짐)**
+- iOS 키보드 + 댓글 입력창 문제 (Growth 플랜 업그레이드 시 해결)
+- 날씨 카드(card.html) 좌표 업데이트 안 됨 (§18 참고)
+- Android 콜드 스타트 흰 화면 (BDK 레벨 버그)
 
