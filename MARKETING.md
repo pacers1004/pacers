@@ -22,9 +22,12 @@
 ## 2. 채널 전략
 
 ### A. Instagram (핵심 채널)
-- **포맷**: 카드뉴스 5장 캐러셀 (Story Arc 구조)
-- **자동화**: Make.com 매일 18:30 KST 자동 발행 (§4 참고)
-- **콘텐츠**: 러너 공감 → 반전 인사이트 → 감각 묘사 → 성취 → 위인 명언
+- **포맷 1 (18:30 KST)**: 카드뉴스 5장 캐러셀 — Story Arc V2 (위인 명언)
+  - 자동화: Make.com Scenario 6263718 (§4 참고)
+- **포맷 2 (07:00 KST)**: 한국 러닝 뉴스 카드뉴스 5장 — 매일 최신 뉴스
+  - 자동화: Make.com Scenario 6270177 (2026-06-21 신규)
+  - 소스: Google News RSS → Claude Haiku → 카드 텍스트 → Placid 이미지
+  - Vercel: `/api/news-cards` (weather-app)
 - **톤**: 블라인드 러닝 채널 감성 — 솔직하고 담담하게, 자기계발 X
 
 ### B. 앱 내 콘텐츠 (리텐션)
@@ -244,13 +247,16 @@ cron-job.org (KST 9회) → POST pacers.kr/api/1.1/wf/create_cooldown_post
 | 2026-06-20 | 인스타 캐러셀 자동화 — 템플릿 3종 로테이션 구현 (`api/template.js`) |
 | 2026-06-20 | Sleep 함수 구현 (`api/sleep.js`) — httpbin.org 대체 |
 | 2026-06-21 | Story Arc V2 100세트 프리셋 기획 / 노션 마케팅 플랜 정리 |
+| 2026-06-21 | 100세트 JSON card_5 전체 수정 — 100개 유니크 위인, 중복 0개 확정 |
+| 2026-06-21 | 뉴스 카드뉴스 자동화 — Vercel `/api/news-cards` + Make.com Scenario 6270177 (07:00 KST) |
 | 진행중 | 100세트 JSON → Make.com Data Store 연동 |
 
 ---
 
 ## 9. 다음 작업
 
-- [ ] `running_carousel_100sets_complete.json` 100세트 작성 완료
+- [x] `running_carousel_100sets_complete.json` 100세트 완성 (2026-06-21) — 중복 없음, 100개 유니크 위인 확정
+- [x] 뉴스 카드뉴스 자동화 (07:00 KST) — Vercel + Make.com Scenario 6270177 (2026-06-21)
 - [ ] Make.com Data Store에 100세트 업로드
 - [ ] Make.com 블루프린트 업데이트 (Module 1-5 → Data Store 방식)
 - [ ] Natively 빌드 주문 → TestFlight 검증
