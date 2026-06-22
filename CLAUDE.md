@@ -21,6 +21,7 @@
 | 03 | Daily Pacer 매칭 스코어 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ✅ 라이브 |
 | 04 | 자동 모니터링 & Slack 알림 | `~/weather-app` | `pacers1004/weather-app` | Vercel + cron-job.org | ✅ 라이브 |
 | 05 | Daily Pacer 첫인상 보내기 | 버블 전용 (Vercel 불필요) | — | Bubble 내 구현 | ✅ 라이브 (2026-06-20) |
+| 06 | 마라톤 훈련 플랜 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ⚠️ 미완성 (UI 구현, 버블 연동 미완) |
 
 ### 네이밍 컨벤션
 - **로컬**: `~/[feature-slug]/`
@@ -117,44 +118,16 @@ vercel --prod
 
 ### ⚠️ 필수: API 크레딧 모니터링
 
-**Vercel 코드에서 Claude API 호출 시 별도 Console 크레딧 소모**
+**Vercel에서 Claude API를 호출하는 곳:**
 
-| 항목 | 내용 |
+| API 호출처 | 내용 |
 |------|------|
-| API 호출처 | weather-app/api/match.js (Daily Pacer 매칭) |
-| 사용 토큰 | 월 ~7,200 input + 900 output (약 ₩1,500) |
-| 크레딧 소진 시 | API 호출 자동 실패 (403 error) |
-| 알림 절차 | 크레딧 부족 시 **대표님에게 즉시 알림** |
+| `api/cooldown.js` | 쿨다운 자동 게시 (claude-sonnet-4-6, 7회/일) |
+| `api/match.js` | ❌ Claude API 미사용 — 순수 알고리즘 매칭 (토큰 비용 없음) |
 
-**에러 감지 로직:**
-```javascript
-// match.js에서 403 error 감지 시:
-// 1. 콘솔 로그: [CRITICAL] Claude API 크레딧 부족
-// 2. 응답: 503 + error_code (claude_api_credit_exhausted)
-// 3. 충전 링크 포함
-```
-
-**모니터링 방법:**
-
-| 방법 | 주기 | 확인처 | 액션 |
-|------|------|--------|------|
-| 실시간 모니터링 | 발생 시 | Vercel Logs | API 요청 실패 → 콘솔 [CRITICAL] 확인 |
-| 월 1회 점검 | 월초 | [Anthropic Console](https://console.anthropic.com/account/billing/overview) | Usage 확인 → 부족 시 충전 |
-| Vercel 대시보드 | 주 1회 | Vercel Functions | 요청 실패율 확인 |
-
-**Vercel 로그 확인 방법:**
-```
-1. Vercel 프로젝트 접속 → weather-app
-2. Functions → api/match.js → Logs
-3. [CRITICAL] 키워드로 검색 → 크레딧 부족 발견
-4. 즉시 https://console.anthropic.com/account/billing/overview 접속해 충전
-```
-
-**API 크레딧 충전:**
-1. Anthropic Console → Billing
-2. Add payment method → 카드 정보 입력
-3. Credits 또는 Prepaid 플랜 선택
-4. 충전 완료 후 Vercel 자동 복구 (재배포 불필요)
+**크레딧 모니터링:**
+- 월 1회: [Anthropic Console](https://console.anthropic.com/account/billing/overview) → Usage 확인
+- `api/cooldown.js` 실패 시 Vercel Logs에서 `[ERROR]` 확인
 
 ---
 
@@ -2206,4 +2179,56 @@ window.fireImpression = function (emoji) {
 - 날씨 카드(card.html) 좌표 업데이트 안 됨 (§18 참고)
 - Android 콜드 스타트 흰 화면 (BDK 레벨 버그 → Natively 이주로 해소 기대)
 - Android 버블 하단탭이 안드 백버튼/네비바 가림 → `body { padding-bottom: env(safe-area-inset-bottom); }` (버블 01_main HTML 헤더, 추후)
+
+---
+
+## § 30: Feature 06 — 마라톤 훈련 플랜 ⚠️ 미완성
+
+> **상태**: UI + API 구현됨. 버블 연동 미완성. 아직 라이브 미적용.
+
+### 개요
+- **기능**: 대회 정보 입력 → 주차별 마라톤 훈련 플랜 자동 생성 + 오늘 훈련 히어로 카드
+- **파일**: `~/weather-app/marathon-plan.html` + `~/weather-app/api/marathon.js`
+- **배포 URL**: `https://weather-app-pied-theta.vercel.app/marathon-plan.html`
+- **테스트 URL**:
+  ```
+  https://weather-app-pied-theta.vercel.app/marathon-plan.html?user_id=test123&race_date=2026-11-15&race_name=%EC%84%9C%EC%9A%B8%EB%A7%88%EB%9D%BC%ED%86%A4&race_distance=full&level=intermediate&current_weekly_km=40&today=2026-06-21&rlog_this_week=18
+  ```
+
+### URL 파라미터 (버블에서 주입 예정)
+| 파라미터 | 설명 | 예시 |
+|----------|------|------|
+| `user_id` | 버블 User unique id | `test123` |
+| `race_date` | 대회일 (YYYY-MM-DD) | `2026-11-15` |
+| `race_name` | 대회명 | `서울마라톤` |
+| `race_distance` | 거리 (5k/10k/half/full) | `full` |
+| `level` | 레벨 (beginner/intermediate/advanced) | `intermediate` |
+| `current_weekly_km` | 현재 주간 km | `40` |
+| `today` | 오늘 날짜 (YYYY-MM-DD) | `2026-06-21` |
+| `rlog_this_week` | 이번 주 실제 누적 km (러닝로그) | `18` |
+
+### 구현 완료 항목
+- ✅ `api/marathon.js` — 순수 알고리즘 플랜 생성 (외부 API 없음, 클로드 미사용)
+  - 레벨별 주간 패턴 (beginner/intermediate/advanced)
+  - 10% 룰 + 3:1 사이클 + 테이퍼링
+  - 거리별 피크 km (5k=35, 10k=50, half=65, full=80)
+  - 최대 24주 플랜, 레이스 주 자동 처리
+- ✅ `marathon-plan.html` — 단일 스크롤 페이지 (776줄)
+  - 빈 상태: 대회/레벨/목표 설정 셀 (탭해서 바텀시트 오픈)
+  - 활성 상태: 히어로 카드(오늘 훈련 + D-day) + 동기 메시지 + 주간 캘린더 + 전체 플랜
+  - 스트릭 카운터, 오늘 훈련 체크인 버튼
+  - 바텀시트 입력 3개: race / level / goal
+  - postMessage: `marathon_plan_loaded`, `marathon_training_done`
+  - localStorage: `mp2_plan`, `mp2_cfg`, `mp2_sess`
+
+### 미완성 항목 (다음 세션에서 구현)
+- ⏳ 버블 연동: 마라톤 캘린더 대회 선택 → iframe URL 파라미터 주입
+- ⏳ 훈련 체크인 → 버블 DailyRunningLog 연동 (postMessage 수신 후 워크플로우)
+- ⏳ 스트릭 데이터 → 버블 DB에서 실제 러닝로그 읽어오기
+- ⏳ 버블 홈/마라톤 탭에 iframe 삽입 (위치 미정)
+- ⏳ 플랜 저장: localStorage만 있고 버블 DB 저장 미구현
+
+### 디자인
+- 다크 배경 `#000`, 브랜드 블루 `#3764f1`, border-radius:22px
+- DESIGN.md 원칙 준수 (숫자가 히어로, 라벨은 작게)
 

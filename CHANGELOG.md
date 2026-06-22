@@ -5,6 +5,23 @@
 
 ---
 
+## 📅 2026-06-22 | Claude Code — Feature 06 기록 + 쿨다운 7/일 전환
+
+### ✅ 쿨다운 자동게시 9/일 → 7/일 전환 완료
+- cron-job.org API로 직접 처리 (수동 작업 없음)
+- 7개 잡 시간 정각으로 정렬: 06 / 08 / 10 / 12 / 15 / 18 / 21시 (KST)
+- 기존 잡 6개 수정 + 2개 삭제 (12:51, 16:14 제거)
+- 2주 시뮬레이션: 씨앗 중복 0건, 부상 씨앗 2% ✅
+- cooldown-scheduler/CLAUDE.md 스케줄 정보 업데이트
+
+### ✅ Feature 06 마라톤 훈련 플랜 문서 등록 (미완성)
+- `marathon-plan.html` + `api/marathon.js` 구현 현황 기록
+- pacers/CLAUDE.md §30, weather-app/CLAUDE.md Feature 06 섹션 추가
+- 파이프라인 테이블 Feature 06 추가 (상태: ⚠️ 미완성)
+- 미완성 항목: 버블 연동 (대회 선택, 체크인, DB 저장, iframe 삽입)
+
+---
+
 ## 📅 2026-06-19 | Claude Code — examples.json 확장 (97→139개)
 
 ### ✅ 쿨다운 자동게시 예시 풀 확장 (+42개)
