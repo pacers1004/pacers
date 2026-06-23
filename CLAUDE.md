@@ -2249,7 +2249,7 @@ window.fireImpression = function (emoji) {
 3. **신규 구독 모델 도입**: 월 **5,500원~7,800원** 사이 (가격 미확정) — 구독자는 위 모든 유료 기능(호감보내기·데일리크루·오늘의카드·마라톤훈련플랜 등) **전부 무제한 무료**
 4. **티켓 모델은 폐지가 아니라 구독과 공존** — 구독 안 한 유저는 계속 티켓으로 개별 결제
 5. **티켓 가격 인상으로 구독 유도**: 1티켓 단가(450원)는 유지, 호감보내기 소모량을 **3티켓 → 5~6티켓으로 인상** (1회당 1,350원 → 2,250~2,700원). 자주 쓰는 유저일수록 구독이 압도적으로 유리해지도록 설계
-6. **Natively 이주와 함께 진행** — RevenueCat에 구독 SKU 신규 추가 필요 (기존엔 소비성 티켓 SKU 8종만 셋업됨, §19 참고)
+6. **BDK 기반 구독 모델 구현** (Natively 이주 보류 2026-06-23 — 가우라브 BDK 구독 템플릿 기반) — RevenueCat에 구독 SKU 신규 추가 필요 (기존엔 소비성 티켓 SKU 8종만, §19 참고)
 
 ### 비즈니스 로직 (왜 이 구조인가)
 - 구독 가치제안(value prop) = "한 번 자주 쓰면 무조건 구독이 이득"이라는 심리적 앵커링. 티켓 가격을 너무 싸게 유지하면 구독 전환 동기가 약해짐 → 의도적 인상
@@ -2266,4 +2266,98 @@ window.fireImpression = function (emoji) {
 - [ ] 기존 §27 RevenueCat 워크플로우 설계서에 구독 분기 추가 반영
 
 ---
+
+## § 32: 마케팅 자동화 파이프라인
+
+> **상세 문서**: [`MARKETING.md`](./MARKETING.md) — 전략·콘텐츠·자동화·KPI 전체
+> **현재 상태**: 인스타 1일 2개 자동 발행 라이브 ✅ | 유튜브 자동화는 미연동 (수동 38개)
+
+### 인스타그램 자동화 (라이브 ✅)
+
+| 시나리오 | 시간 | 내용 |
+|---------|------|------|
+| Make.com 6263718 | 19:30 KST | Story Arc V2 캐러셀 5장 (위인 명언, 100일치 프리셋) |
+| Make.com 6270177 | 22:00 KST | 한국 러닝 뉴스 카드뉴스 5장 (Google News RSS → Claude Haiku → Placid) |
+
+**파이프라인 구조:**
+```
+Make.com → Vercel /api/template (템플릿 UUID, 블랙/블루/퍼플 3일 사이클)
+         → Make Data Store (100세트 프리셋, 순차 발행)
+         → Placid API (이미지 5장 생성, Sleep 25초 대기)
+         → Instagram API (캐러셀 업로드)
+```
+
+**Vercel 지원 함수:**
+- `/api/template` — KST 날짜 기반 Placid 템플릿 UUID 반환
+- `/api/sleep?ms=25000` — 이미지 생성 대기용
+
+**Placid 템플릿 3종:**
+| UUID | 색상 | 발행 주기 |
+|------|------|---------|
+| `l4ugi3lmvr3en` | 블랙 | day%3=0 |
+| `zxprljfehgozj` | 블루 | day%3=1 |
+| `lxt4xvqnjeaz6` | 퍼플 | day%3=2 |
+
+**100세트 프리셋 파일:** `~/Desktop/페이서스 출시 준비/running_carousel_100sets_complete.json`
+Make.com Data Store 137426에 100/100 업로드 완료 (2026-06-22 확인)
+
+### 구독모델 — "행운의 7%" 캠페인 (MARKETING.md §0)
+- 월 5,500~7,800원 (가격 미확정), 구독자 = 모든 유료기능 무제한
+- 구독료(앱스토어 수수료 제외)의 7% → 포캣멍센터 후원
+- **구현 방식**: BDK 기반 (Natively 이주 보류 2026-06-23)
+- 가우라브 BDK 구독 인앱결제 버블 워크플로우 템플릿 대기 중
+
+---
+
+## § 33: 페이서 다마고치 (Pacer Tamagotchi) — 2026-06-23
+
+### 개요
+달리기 습관이 캐릭터를 키우는 다마고치 기능.
+Daily R-Log(distance_km, date, emotion) 데이터와 직접 연동.
+Today Weather와 동일한 Vercel iframe 구조로 홈화면에 배치.
+
+### 캐릭터 레벨 (누적 km 기준)
+Lv.0 알(0), Lv.1 아기냥(10), Lv.2 새벽냥(30), Lv.3 뚱냥이(80),
+Lv.4 페이서냥(200), Lv.5 엘리트냥(500), Lv.6 마라토너냥(1000)
+
+### 상태 판정 (date 기준)
+today달림=happy / 1일=normal / 2일=sad / 3일+=danger / 7일+=egg(레벨-1 퇴화)
+
+### Vercel URL 파라미터
+```
+/cat.html?level=N&status=happy|normal|sad|danger|egg
+         &streak=N&total_km=N&emotion=happy|proud|tired|neutral&nickname=STRING
+```
+
+### Bubble User 테이블 신규 필드 (3개만 추가)
+- `tamagotchi_level`: number
+- `tamagotchi_streak`: number
+- `tamagotchi_last_run_date`: date
+
+### DailyRunningLog 기존 필드 활용 (신규 불필요)
+- `distance_km` → 레벨 계산
+- `date` → status 판정
+- `emotion` → 애니메이션 연동
+
+### 파일 구조 (Vercel, weather-app 동일 프로젝트)
+- `cat.html` — 홈용 요약 카드 (Today Weather card.html과 동일 사이즈)
+- `cat_detail.html` — 상세 페이지 (캘린더, 레벨 로드맵, 달리기 기록 버튼)
+
+### 상태별 UI
+| status | 메시지 | 캐릭터 |
+|--------|--------|--------|
+| happy | "오늘도 달렸어요! 🏃" | 활발, 별/하트 이펙트 |
+| normal | "내일은 같이 달려요 🐾" | 기본, 느린 숨쉬기 |
+| sad | "벌써 이틀째 기다리고 있어요..." | 처진 귀, 눈물 |
+| danger | "캐릭터가 위험해요! 지금 바로 달려요 🚨" | 흔들림, ⚠️ |
+| egg | "너무 오래 쉬었어요. 다시 시작해봐요 🥚" | 알로 퇴화, 균열 |
+
+### 구현 단계
+- Phase1: 캐릭터 7단계 + 상태 시스템 Vercel 구현 (cat.html + cat_detail.html)
+- Phase2: R-Log 저장 시 Bubble 워크플로우 연동 (last_run_date 업데이트)
+- Phase3: 스트릭 + 배지 연동 + 퇴화 푸시 알림
+- Phase4: 캐릭터 스킨 아이템 (티켓 소비 수익화)
+
+### 노션 기획 링크
+https://app.notion.com/p/387636bbf08a81899380d218c3d03d24
 
