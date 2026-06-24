@@ -27,7 +27,21 @@
 
 ---
 
-## 1. 발행 큐 (Notion) — 생성 완료 ✅
+## 0. 영상 공개 호스팅 — Cloudflare R2 (2026-06-24 셋업 완료 ✅)
+- **이유**: 인스타 Reels API는 Google Drive 영상 못 읽음 → 공개 직접 URL 필요. R2 = 무료 10GB + **전송(egress) 0원** + 상업용 OK
+- **계정**: bimhara@gmail.com / Account ID `e11246e5ea3066cbb681106d92a2e33d`
+- **버킷**: `pacers-videos` (Public Development URL 활성화)
+- **공개 URL 베이스**: `https://pub-7c04022291a242b887d041c570b06dcf.r2.dev`
+- **업로드 방법 (v1)**: R2 대시보드에 영상 드래그 → `https://pub-7c04...r2.dev/<파일명>` 으로 즉시 공개 접근 (별도 업로드 페이지 불필요)
+- **다음(선택)**: 드래그 업로드 페이지 제작 → 업로드 시 Make 큐 자동등록까지 (편의 개선)
+
+## 1. 발행 큐 — Make Data Store (2026-06-24 생성 완료 ✅)
+> Notion 큐는 Make가 읽으려면 Notion 연결을 또 해야 해서, Make 내장 Data Store로 발행 큐 운영. Notion은 사람용 기획보드로 유지.
+- **Data Store**: `영상 발행 큐` (id 138607, teamId 1964933)
+- **필드**: 영상URL / 유튜브제목 / 유튜브설명 / 인스타캡션 / 상태(승인대기·승인·발행됨)
+- **연결 현황**: 유튜브 `Pacers YouTube`(connId 8495322) ✅ / 인스타(FB connId 8405750, IG 17841478853004855) ✅ / 틱톡 ⏭️ 보류
+
+## 1-B. (구) 발행 큐 (Notion) — 사람용 기획보드
 - URL: https://app.notion.com/p/c4a12933dbab46d78da0f954f50eb80b (CMO 마케팅 플랜 하위)
 - 컬럼: 영상제목 / 상태 / 소스영상URL / 브리프 / 채널 / 유튜브제목 / 유튜브설명 / 인스타캡션 / 틱톡캡션 / 해시태그 / 발행일
 - **상태 흐름**: 문구생성대기 → 승인대기 → (대표님)승인됨 → 발행됨 / 보류
