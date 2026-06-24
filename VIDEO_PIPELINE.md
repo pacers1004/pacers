@@ -40,6 +40,16 @@
 - **Data Store**: `영상 발행 큐` (id 138607, teamId 1964933)
 - **필드**: 영상URL / 유튜브제목 / 유튜브설명 / 인스타캡션 / 상태(승인대기·승인·발행됨)
 - **연결 현황**: 유튜브 `Pacers YouTube`(connId 8495322) ✅ / 인스타(FB connId 8405750, IG 17841478853004855) ✅ / 틱톡 ⏭️ 보류
+- **큐 필드명(영문 키)**: `video_url`(R2 공개URL) / `yt_title` / `yt_desc` / `ig_caption` / `status`(승인대기·승인·발행됨)
+
+## 1-A. 발행 시나리오 — Make scenario 6311230 (2026-06-24 생성 ✅, 현재 OFF)
+- **이름**: `Pacers 영상 자동발행 (YT+IG)` / **스케줄**: 매일 10:00 KST / **isActive: false**(검증 전 안전)
+- **현재 모듈** (검증 완료): ① `datastore:SearchRecord`(status=승인, 1건) → ② `instagram-business:CreateAReelPost`(video_url={{1.video_url}}, caption={{1.ig_caption}}, share_to_feed=true) → ③ `datastore:UpdateRecord`(status=발행됨)
+- **⏳ 남은 1단계 — 유튜브 모듈 추가**: Make API가 유튜브 모듈 사양을 안 줘서 Grid 에디터에서 직접 추가 필요. ①과 ② 사이에 삽입:
+  - `HTTP > Get a file`(url={{1.video_url}}) → 영상 바이너리 다운로드
+  - `YouTube > Upload a Video`(connId 8495322, title={{1.yt_title}}, description={{1.yt_desc}}, file=HTTP 응답 data, privacy=Public)
+- **테스트 절차(활성화 전 필수)**: ① R2에 테스트 영상 드래그 → URL 확보 ② Data Store에 행 1개 추가(video_url, ig_caption, status=승인) ③ 시나리오 "Run once" → 인스타/유튜브 실제 게시 확인 ④ 정상이면 스케줄 ON
+- **막발행 방지**: status=승인인 행만 발행. 평소엔 status=승인대기로 쌓고, 묶어서 승인.
 
 ## 1-B. (구) 발행 큐 (Notion) — 사람용 기획보드
 - URL: https://app.notion.com/p/c4a12933dbab46d78da0f954f50eb80b (CMO 마케팅 플랜 하위)
