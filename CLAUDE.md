@@ -2272,24 +2272,37 @@ window.fireImpression = function (emoji) {
 > **상세 문서**: [`MARKETING.md`](./MARKETING.md) — 전략·콘텐츠·자동화·KPI 전체
 > **현재 상태**: 인스타 1일 2개 자동 발행 라이브 ✅ | 유튜브 자동화는 미연동 (수동 38개)
 
-### 인스타그램 자동화 (라이브 ✅)
+### 인스타그램 자동화 (라이브 ✅) — 2026-06-25 기준
 
 | 시나리오 | 시간 | 내용 |
 |---------|------|------|
-| Make.com 6263718 | 19:30 KST | Story Arc V2 캐러셀 5장 (위인 명언, 100일치 프리셋) |
-| Make.com 6270177 | 22:00 KST | 한국 러닝 뉴스 카드뉴스 5장 (Google News RSS → Claude Haiku → Placid) |
+| Make.com 6263718 | 22:00 KST | 스토리 아크 5장 (Claude 동적 생성, `?arc=1`, ARC_TOPICS 10종 사이클) |
+| Make.com 6270177 | 19:30 KST | 요일별 러닝 팁 5장 (Claude Haiku, 실제 뉴스 아님 — 요일 테마 생성) |
+| Make.com 6322461 | 22:30 월수금 | 클투스타일 7장 (정보카드 + 카드별 다른 배경사진) |
 
-**파이프라인 구조:**
+> ⚠️ **6270177 주의**: 이름은 "뉴스 카드뉴스"지만 실제 RSS 미사용. `/api/news-cards`가 요일별(월=동기부여, 화=훈련팁, 수=장비/영양/회복, 목=교정, 금=주말준비, 토=그룹런, 일=롱런) Claude Haiku 팁을 생성. Google News RSS 연동은 안 됨.
+
+**시나리오 #6263718 파이프라인 (스토리 아크 — 2026-06-25 업데이트):**
 ```
 Make.com → Vercel /api/template (템플릿 UUID, 블랙/블루/퍼플 3일 사이클)
-         → Make Data Store (100세트 프리셋, 순차 발행)
-         → Placid API (이미지 5장 생성, Sleep 25초 대기)
-         → Instagram API (캐러셀 업로드)
+         → Vercel /api/card-news?arc=1 (Claude Sonnet, ARC_TOPICS 10종 중 날짜 시드로 선택)
+              card1=공감 / card2=전환 / card3=행동 / card4=결과 / card5=명언+저자
+         → Placid API (이미지 5장, layer "New text layer")
+         → Instagram API (캐러셀 업로드, 22:00 KST)
 ```
+> 이전: Data Store 100세트 순차 발행 → 반복/유사 패턴 문제  
+> 변경: Claude 동적 생성 → 매일 다른 상황의 스토리 아크
+
+**ARC_TOPICS 10종 (api/card-news.js):**
+- 달리기 싫다 / 너무 바빠 / 느리게 달리기 창피 / 오래 쉰 후 두려움 / 살 안 빠짐
+- 기록 제자리 / 무릎 부상 / 같은 코스 지겨움 / 처음 1km 힘듦 / 새벽 알람
 
 **Vercel 지원 함수:**
 - `/api/template` — KST 날짜 기반 Placid 템플릿 UUID 반환
 - `/api/sleep?ms=25000` — 이미지 생성 대기용
+- `/api/card-news?arc=1` — 스토리 아크 5장 생성 (Claude Sonnet)
+- `/api/card-news` (기본) — 정보형 7장 생성 (클투스타일 #6322461에 사용)
+- `/api/news-cards` — 요일별 팁 5장 (#6270177에 사용)
 
 **Placid 템플릿 3종:**
 | UUID | 색상 | 발행 주기 |
@@ -2297,9 +2310,6 @@ Make.com → Vercel /api/template (템플릿 UUID, 블랙/블루/퍼플 3일 사
 | `l4ugi3lmvr3en` | 블랙 | day%3=0 |
 | `zxprljfehgozj` | 블루 | day%3=1 |
 | `lxt4xvqnjeaz6` | 퍼플 | day%3=2 |
-
-**100세트 프리셋 파일:** `~/Desktop/페이서스 출시 준비/running_carousel_100sets_complete.json`
-Make.com Data Store 137426에 100/100 업로드 완료 (2026-06-22 확인)
 
 ### 구독모델 — "행운의 7%" 캠페인 (MARKETING.md §0)
 - 월 5,500~7,800원 (가격 미확정), 구독자 = 모든 유료기능 무제한

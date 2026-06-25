@@ -42,14 +42,26 @@
 - **연결 현황**: 유튜브 `Pacers YouTube`(connId 8495322) ✅ / 인스타(FB connId 8405750, IG 17841478853004855) ✅ / 틱톡 ⏭️ 보류
 - **큐 필드명(영문 키)**: `video_url`(R2 공개URL) / `yt_title` / `yt_desc` / `ig_caption` / `status`(승인대기·승인·발행됨)
 
-## 1-A. 발행 시나리오 — Make scenario 6311230 (2026-06-24 생성 ✅, 현재 OFF)
-- **이름**: `Pacers 영상 자동발행 (YT+IG)` / **스케줄**: 매일 10:00 KST / **isActive: false**(검증 전 안전)
-- **현재 모듈** (검증 완료): ① `datastore:SearchRecord`(status=승인, 1건) → ② `instagram-business:CreateAReelPost`(video_url={{1.video_url}}, caption={{1.ig_caption}}, share_to_feed=true) → ③ `datastore:UpdateRecord`(status=발행됨)
-- **⏳ 남은 1단계 — 유튜브 모듈 추가**: Make API가 유튜브 모듈 사양을 안 줘서 Grid 에디터에서 직접 추가 필요. ①과 ② 사이에 삽입:
-  - `HTTP > Get a file`(url={{1.video_url}}) → 영상 바이너리 다운로드
-  - `YouTube > Upload a Video`(connId 8495322, title={{1.yt_title}}, description={{1.yt_desc}}, file=HTTP 응답 data, privacy=Public)
-- **테스트 절차(활성화 전 필수)**: ① R2에 테스트 영상 드래그 → URL 확보 ② Data Store에 행 1개 추가(video_url, ig_caption, status=승인) ③ 시나리오 "Run once" → 인스타/유튜브 실제 게시 확인 ④ 정상이면 스케줄 ON
-- **막발행 방지**: status=승인인 행만 발행. 평소엔 status=승인대기로 쌓고, 묶어서 승인.
+## 1-A. 발행 시나리오 — Make scenario 6311230 (현재 OFF, 인스타 검증 완료 ✅ / 유튜브 미완)
+- **이름**: `Pacers 영상 자동발행 (YT+IG)` / **스케줄**: 매일 10:00 KST / **현재 비활성(OFF)** — 검증 끝날 때까지 꺼둠
+- **저장된 모듈 = 3개** (인스타 파이프라인, ✅ 실전 검증 — 실제 릴스 2회 게시 성공):
+  ① `datastore:SearchRecord` (datastore 138607, filter `status text:equal 승인`, limit 1)
+  → ② `instagram-business:CreateAReelPost` (conn 8405750, accountId `17841478853004855`, `video_url={{1.data.video_url}}`, `caption={{1.data.ig_caption}}`, `share_to_feed=true`)
+  → ③ `datastore:UpdateRecord` (datastore 138607, `key={{1.key}}`, `status=발행됨`)
+- **⚠️ 핵심 교훈(다음 세션 필독)**: 검색 출력은 `key` + **`data`** 로 감싸여 있어 필드 참조는 반드시 **`{{1.data.필드명}}`** (예: `{{1.data.video_url}}`). `{{1.video_url}}`로 하면 빈값 → 실패.
+
+### ⏳ 다음 세션 — 유튜브 가지 추가 (미완. 자동화로 막혔던 지점)
+- **상태**: UI에서 HTTP+YouTube 모듈을 추가했으나 **시나리오 저장이 안 돼 날아감**. 블루프린트엔 아직 3개 모듈만 있음.
+- **⚠️ Make 함정**: 모듈 설정창의 `Save`(모듈 저장) ≠ **시나리오 저장**. 모듈 추가/수정 후 반드시 **에디터 좌하단 💾(시나리오 저장)** 눌러야 영구 반영. 안 누르면 모듈이 사라짐 ← 이번에 이걸로 날아감.
+- **추가할 모듈** (③ 뒤 또는 ① 뒤에 직렬로):
+  - `HTTP > Download a file` : URL = `{{1.data.video_url}}`
+  - `YouTube > Upload a Video` : Connection=`My YouTube connection`(connId 8495322) / Title=`{{1.data.yt_title}}` / File=위 HTTP의 "Download a file" 출력(자동연결됨) / Video Category=Sports / Privacy=**Public** / Description=`{{1.data.yt_desc}}` / made for kids=No
+  - **YouTube 모듈은 Make API로 사양 조회 불가(빌트인)** → 반드시 Grid UI에서 추가. UI "+"가 자동클릭에 잘 안 먹음 → 사람이 "+" 한 번 눌러주면 그 다음(검색·필드입력)은 진행됨.
+- **추가 후 반드시 💾 시나리오 저장** → `scenarios_run`(API) 또는 UI Run once로 검증 → operation이 **5개**(검색·인스타·발행됨·HTTP·유튜브)면 정상. 3개면 유튜브 안 들어간 것.
+- **검증 자산**: R2 테스트 영상 `https://pub-7c04022291a242b887d041c570b06dcf.r2.dev/0624.mp4`, 큐 레코드 key `2cbf29c9c62d`(현재 status=발행됨 → 재테스트 시 `data-store-records_update`로 status=승인 되돌리기). yt_title/yt_desc/ig_caption은 SEO 최적화 완료본이 레코드에 들어있음.
+- **순서 정리(검증 후)**: 이상적 순서는 검색→유튜브→인스타→발행됨. 현재는 인스타가 먼저라 무방하나, 원하면 `scenarios_update` 블루프린트로 재정렬.
+
+- **막발행 방지**: status=승인인 행만 발행. 평소엔 status=승인대기로 쌓고, 묶어서 한 번에 승인.
 
 ## 1-B. (구) 발행 큐 (Notion) — 사람용 기획보드
 - URL: https://app.notion.com/p/c4a12933dbab46d78da0f954f50eb80b (CMO 마케팅 플랜 하위)

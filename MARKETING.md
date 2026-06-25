@@ -66,13 +66,20 @@
 
 ## 2. 채널 전략
 
-### A. Instagram (핵심 채널)
-- **포맷 1 (18:30 KST)**: 카드뉴스 5장 캐러셀 — Story Arc V2 (위인 명언)
-  - 자동화: Make.com Scenario 6263718 (§4 참고)
-- **포맷 2 (07:00 KST)**: 한국 러닝 뉴스 카드뉴스 5장 — 매일 최신 뉴스
-  - 자동화: Make.com Scenario 6270177 (2026-06-21 신규)
-  - 소스: Google News RSS → Claude Haiku → 카드 텍스트 → Placid 이미지
-  - Vercel: `/api/news-cards` (weather-app)
+### A. Instagram (핵심 채널) — 2026-06-25 기준
+
+| 시나리오 | 시간 | 포맷 | 비고 |
+|---------|------|------|------|
+| Make.com 6263718 | 22:00 KST 매일 | 스토리 아크 5장 (감성) | Claude 동적 생성, `?arc=1`, ARC_TOPICS 10종 |
+| Make.com 6270177 | 19:30 KST 매일 | 요일별 러닝 팁 5장 (실용) | Claude Haiku, 실제 뉴스 아님 — 요일 테마 |
+| Make.com 6322461 | 22:30 KST 월수금 | 클투스타일 7장 (정보+사진) | 카드별 다른 배경사진, Vercel `/api/card-news` |
+
+> ⚠️ **6270177 주의**: 이름은 "뉴스 카드뉴스"이지만 Google RSS 미사용. `/api/news-cards`가 요일별 Claude Haiku 팁 생성. 실제 뉴스 기반 아님.
+
+**시나리오별 차별화:**
+- **#6263718 (감성 아크)**: 달리기 싫은 상황 10종 중 날짜 시드로 하나 선택 → 공감→전환→행동→결과→명언 5장 스토리. 매일 상황이 바뀌어 반복 없음
+- **#6270177 (실용 팁)**: 월=동기부여, 화=훈련팁, 수=장비/영양/회복, 목=폼교정, 금=주말준비, 토=그룹런, 일=롱런 — 요일마다 다른 정보
+- **#6322461 (클투스타일)**: 7장 각각 다른 배경사진 (seed+index 분산), 정보 카드형
 - **톤**: 블라인드 러닝 채널 감성 — 솔직하고 담담하게, 자기계발 X
 
 ### B. YouTube (신규 채널, 2026-06-22 전략 수립)
@@ -121,9 +128,12 @@ Card 5: 위인 명언 (Quote) — 맥락에 맞는 인용
 - 금지: 날씨/계절/날짜/지명/대회명/자기계발어/격식체 종결어미
 - 금지: 새벽런/야간런/해장달리기
 
-### 100세트 프리셋 (100일치 유니크 콘텐츠)
+### 100세트 프리셋 — ⚠️ 폐기됨 (2026-06-25)
 
-Make.com Data Store에 100세트 저장 → 매일 순차 발행 (100일 후 반복 없음)
+> Make.com Data Store 100세트 → Claude `?arc=1` 동적 생성으로 교체. 아래는 기록용.
+> Data Store 137426은 빈 상태 유지해도 됨 (시나리오 #6263718이 더 이상 읽지 않음).
+
+~~Make.com Data Store에 100세트 저장 → 매일 순차 발행 (100일 후 반복 없음)~~
 
 **위인 목록 (Sets 1~100)**:
 무하마드 알리, 마이클 조던, 코베 브라이언트, 오프라 윈프리, 스티브 잡스,
@@ -154,31 +164,50 @@ Make.com Data Store에 100세트 저장 → 매일 순차 발행 (100일 후 반
 
 ## 4. 콘텐츠 자동화 (Make.com)
 
-### A. 인스타그램 자동화 — 시스템 구조
+### A. 인스타그램 자동화 — 시스템 구조 (2026-06-25 업데이트)
 
+**시나리오 #6263718 — 스토리 아크 5장 (22:00 KST 매일)**
 ```
 [Make.com Scenario 6263718]
-"Pacers 일일 캐러셀 5장 18:30 KST"
   │
-  ├─ 매일 18:30 KST 자동 실행
+  ├─ 매일 22:00 KST 자동 실행
   │
   ├─ Module: Vercel /api/template 호출
   │    → KST 날짜 % 3 → 템플릿 UUID 반환
   │    → 블랙/블루/퍼플 3일 사이클 로테이션
   │
-  ├─ Module: Make.com Data Store에서 당일 세트 조회
-  │    → set_id 순차 (1→2→3...→100→1)
-  │    → card_1~5 텍스트 + card_5 위인 이름
+  ├─ Module: Vercel /api/card-news?arc=1 호출 (Data Store 대체)
+  │    → ARC_TOPICS 10종 중 날짜 시드로 1개 선택
+  │    → Claude Sonnet이 5장 스토리 아크 생성
+  │    → card1=공감 / card2=전환 / card3=행동 / card4=결과 / card5=명언+저자
   │
   ├─ Module: Placid API (이미지 생성)
   │    → 카드 1~5 각각 POST https://api.placid.app/api/rest/images
   │    → layer: "New text layer" (3개 템플릿 공통)
-  │    → create_now: false (async 모드)
   │    → Sleep 25초 (Vercel /api/sleep?ms=25000)
   │    → 이미지 URL 수집
   │
   └─ Module: Instagram API
-       → 5장 캐러셀 업로드 (18:30 KST)
+       → 5장 캐러셀 업로드 (22:00 KST)
+
+[이전 구조 — 폐기됨]
+  Make.com Data Store 100세트 순차 발행 (set_001~set_100)
+  → 반복/유사 패턴 문제 → Claude 동적 생성으로 교체 (2026-06-25)
+```
+
+**시나리오 #6270177 — 요일별 러닝 팁 (19:30 KST 매일)**
+```
+  → Vercel /api/news-cards 호출 (Google RSS 미사용)
+  → Claude Haiku가 요일 테마로 팁 5장 생성
+     월=동기부여, 화=훈련팁, 수=장비/영양/회복, 목=폼교정, 금=주말준비, 토=그룹런, 일=롱런
+  → Placid API → Instagram 캐러셀 (19:30 KST)
+```
+
+**시나리오 #6322461 — 클투스타일 7장 (22:30 KST 월수금)**
+```
+  → Vercel /api/card-news (arc 파라미터 없음, 정보 카드형)
+  → 7장 각각 다른 배경사진 (seed+index 분산, R2 또는 Unsplash)
+  → Placid API → Instagram 캐러셀 (22:30 KST)
 ```
 
 ### Placid 템플릿 3종
@@ -439,10 +468,15 @@ cron-job.org (KST 9회) → POST pacers.kr/api/1.1/wf/create_cooldown_post
 
 **틱톡 ⏭️ 보류** — Make 공식 틱톡 모듈은 광고/비즈니스용뿐, organic 영상게시 모듈 없음. 게시는 제3자앱(Zernio, 유료 가능성) 또는 TikTok Content Posting API(개발자앱 승인 필요)만 가능. → 유튜브+인스타 먼저 자동화, 틱톡은 추후 별도.
 
-**다음 ⏭️**
-- [ ] 유튜브+인스타 발행 시나리오 Make API로 조립 (카드뉴스 블루프린트 모델, Schedule→Notion 승인행→Drive영상→YT업로드+IG Reels→Notion 발행됨)
-- [ ] 테스트 영상 1개로 E2E 검증
-- [ ] 10만 크레딧 보너스 적립 확인
+**2026-06-24 추가 진행 ✅ (실전 검증)**
+- **Cloudflare R2 영상 호스팅 셋업 완료** — 버킷 `pacers-videos`, 공개URL `https://pub-7c04022291a242b887d041c570b06dcf.r2.dev` (무료 10GB·전송0원). 인스타가 Drive 못읽는 문제 해결
+- **Make Data Store 발행큐 생성** (id 138607) + **발행 시나리오 6311230 생성**
+- **인스타 자동발행 실전 검증 완료** — 테스트영상으로 실제 릴스 2회 게시 성공 (status 1). 흐름: 큐 승인행→IG릴스(R2 URL)→발행됨 표시. **핵심 교훈**: 검색출력은 `{{1.data.필드}}`로 참조해야 함
+
+**⏳ 다음 세션 시작점 (상세는 `VIDEO_PIPELINE.md` §1-A)**
+- [ ] **유튜브 가지 추가** (미완) — Grid UI에서 HTTP Download+YouTube Upload 모듈 추가. ⚠️ 추가 후 **에디터 좌하단 💾 시나리오 저장 필수**(이번에 저장 안 해서 모듈 날아감). YouTube: Title=`{{1.data.yt_title}}`, Privacy=Public, File=HTTP출력
+- [ ] 재테스트 → operation 5개면 정상 → 스케줄 ON
+- [ ] 틱톡(Zernio/Content API 검토), 10만 크레딧 보너스 확인
 - [ ] (추후) Bubble 연결 → 채널별 가입 추적 + 윈백 자동화
 
 ---
