@@ -2283,7 +2283,9 @@ window.fireImpression = function (emoji) {
 | Make.com 6322461 | 22:30 월수금 | 클투스타일 7장 (풀 우선 → Sonnet 폴백) |
 
 > ⚠️ **6270177 주의**: 이름은 "뉴스 카드뉴스"지만 실제 RSS 미사용. 요일별 테마(월=동기부여/화=훈련팁/수=장비·영양/목=교정/금=주말준비/토=그룹런/일=롱런) — Sonnet 사전생성 풀에서 읽기.
-> ✅ **2026-06-29 카드 풀 도입**: 실시간 Claude 호출 없이 오프라인 사전생성 풀에서 읽기. 풀: arc 80세트 / tip 67세트 / news 105개. 생성: `python3 "/Users/janghara/AUTO VIDEO/gen_cards.py" all`
+> ✅ **2026-06-29 카드 풀 도입**: 실시간 Claude 호출 없이 오프라인 사전생성 풀에서 읽기. 풀: arc 80세트 / tip 67세트(tip60+비교7) / news 105개(요일당15). 생성: `python3 "/Users/janghara/AUTO VIDEO/gen_cards.py" all`
+> ✅ **2026-06-29 Vercel Make.com 에러 수정**: `.vercelignore`에서 `sleep.js`·`template.js`·`_r2.js` 잘못 제외된 것 복구. 6270177(19:30) `image_url is required` 에러 원인이었음. 현재 3개 시나리오 모두 정상 작동 확인.
+> 📊 **#6263718 누적 에러(23/49)**: 전부 2026-06-20~21 시나리오 세팅 중 발생한 테스트 에러. 2026-06-22 이후 7일 연속 100% 성공. 현재 무이슈.
 
 **시나리오 #6263718 파이프라인 (스토리 아크 — 2026-06-25 업데이트):**
 ```
