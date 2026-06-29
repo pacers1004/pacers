@@ -21,7 +21,9 @@
 | 03 | Daily Pacer 매칭 스코어 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ✅ 라이브 |
 | 04 | 자동 모니터링 & Slack 알림 | `~/weather-app` | `pacers1004/weather-app` | Vercel + cron-job.org | ✅ 라이브 |
 | 05 | Daily Pacer 첫인상 보내기 | 버블 전용 (Vercel 불필요) | — | Bubble 내 구현 | ✅ 라이브 (2026-06-20) |
-| 06 | 마라톤 훈련 플랜 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ⚠️ 미완성 (UI 구현, 버블 연동 미완) |
+| 06 | 마라톤 훈련 플랜 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ⚠️ 미완성 (UI 구현, 버블 연동 미완) — **7월 목표** |
+| 07 | 페이서 다마고치 | `~/weather-app` | `pacers1004/weather-app` | Vercel | 🔜 개발 예정 — **7월 목표** |
+| 08 | 구독 모델 (BDK) | 버블 전용 | — | Bubble + RevenueCat | 🔜 개발 예정 — **7월말~8월초 목표** |
 
 ### 네이밍 컨벤션
 - **로컬**: `~/[feature-slug]/`
@@ -2187,7 +2189,7 @@ window.fireImpression = function (emoji) {
 
 ## § 30: Feature 06 — 마라톤 훈련 플랜 ⚠️ 미완성
 
-> **상태**: UI + API 구현됨. 버블 연동 미완성. 아직 라이브 미적용.
+> **상태**: UI + API 구현됨. 버블 연동 미완성. **목표: 7월 중순 라이브**.
 
 ### 개요
 - **기능**: 대회 정보 입력 → 주차별 마라톤 훈련 플랜 자동 생성 + 오늘 훈련 히어로 카드
@@ -2239,7 +2241,7 @@ window.fireImpression = function (emoji) {
 
 ## § 31: 페이서스 2.0 — 구독 모델 + 가격 정책 (2026-06-22 의사결정)
 
-> **상태**: 방향 확정. 구체 가격/SKU/RevenueCat 구독 셋업은 미착수.
+> **상태**: 방향 확정. **목표: 7월말~8월초 출시** (마라톤+다마고치 이후). 가우라브 BDK 구독 템플릿 도착 즉시 1주일 안에 완성 예상 (기존 BDK 인앱결제 플로우 재활용).
 > 트리거가 된 계기: §32 "오늘의 카드"(사주/타로) + §30 마라톤 훈련 플랜 — 두 신규 기능을 유료로 출시하면서 구독 모델을 같이 도입하기로 결정.
 
 ### 핵심 의사결정 (대표님 확정)
@@ -2321,6 +2323,8 @@ Make.com → Vercel /api/template (템플릿 UUID, 블랙/블루/퍼플 3일 사
 ---
 
 ## § 33: 페이서 다마고치 (Pacer Tamagotchi) — 2026-06-23
+
+> **목표: 7월 중순~말 출시** (마라톤 훈련 플랜과 연계 — 훈련 체크인 → 냥이 행복해짐)
 
 ### 개요
 달리기 습관이 캐릭터를 키우는 다마고치 기능.
