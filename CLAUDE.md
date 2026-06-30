@@ -2384,6 +2384,83 @@ https://app.notion.com/p/387636bbf08a81899380d218c3d03d24
 
 ---
 
+## § 33-B: 다마고치 구현 현황 (2026-06-30) — ⚠️ 다음 세션 인계용
+
+> 거의 완성. **남은 핵심 버그 1개: 냥이 상세 세로 스크롤이 특정 해상도에서 안 먹힘.** 아래 "미해결" 참고.
+
+### 파일 (weather-app, 모두 라이브 배포됨)
+| 파일 | 역할 |
+|------|------|
+| `cat.html` | 홈 요약카드 (높이 220px) |
+| `cat_detail.html` | 냥이 상세 페이지 (냥이+스탯+도감+진화연출) |
+| `cat_input.html` | **입력 전용 폼** (완료버튼 없음, 값 바뀔 때 postMessage) — 버블 Popup 안에 삽입 |
+
+### 전체 아키텍처 (확정)
+```
+[홈] cat.html 요약카드 (Daily R-log 자리 대체)
+   └ "Group 다마고치 냥이 상세 진입" 클릭 → My Cat 탭으로
+[My Cat 탭] cat_detail.html iframe (id="cat-detail")
+   └ 하단 버블 네이티브 플로팅 버튼 "오늘 달리기 기록하기"
+       → 클릭 → 버블 Popup(Show) 표시
+[Popup] cat_input.html iframe (id="cat-input") = 예쁜 입력폼
+   → 값 변경 시 postMessage {type:'rlog_values', km,emotion,minutes,memo}
+   → 다리 스크립트가 bubble_fn_rlog({output1:km,output2:emotion,output3:min,output4:memo}) 호출
+   → 버블 네이티브 "러닝 기록 완료하기" 버튼 클릭 → 워크플로우
+```
+
+### 버블 배선 (완료)
+- **User 신규 필드 4개**: `tamagotchi_lifetime_km`(num), `tamagotchi_streak`(num), `tamagotchi_last_run_date`(date), `tamagotchi_longest_streak`(num)
+- **JTB**: `JavascripttoBubble 냥이` — Multiple Outputs, output1=number(거리), output2=text(감정), output3=number(분), output4=text(메모), Publish value ✓
+- **다리 스크립트** (페이지 HTML 엘리먼트): `message` 수신 → `rlog_values`면 bubble_fn_rlog 호출 / `openSheet`·`didRun`은 cat-detail로 전달
+- **워크플로우** ("러닝 기록 완료하기" 클릭):
+  - Step1 Create DailyRunningLog: distance_km=output1, emotion=`EmotionType:All Options:filtered(Display=output2):first item`, duration_sec=output3×60, comment=output4 (date/key들 그대로)
+  - Step2 Make changes to User: tamagotchi_lifetime_km += output1, tamagotchi_last_run_date=now
+  - Step3~7: 기존 퀘스트/티켓 로직 **그대로 유지**
+  - 끝 Step: Run JS → `document.getElementById('cat-detail').contentWindow.postMessage({action:'didRun',km:output1,new_lifetime:tamagotchi_lifetime_km},'*')`
+- **today_km/week_km Search 제약**: `user = Current User` + `date >= rounded down to day/week` (이거 없으면 전국민 합산됨 — 필수)
+- **EmotionType 옵션셋**: Display = happy/proud/tired (소문자, iframe 값과 일치)
+
+### iframe 리로드 방지 (커스텀 상태 스냅샷) — ⭐ 핵심
+버블이 lifetime_km 바뀔 때 iframe을 리로드해서 진화 애니메이션이 끊기던 문제 → **src를 User 필드가 아닌 커스텀 상태로 바인딩**해서 해결.
+- `01_다마고치 냥이_tab`에 상태 5개: `s_life, s_today, s_week, s_streak, s_longest` (모두 number)
+- "Group 다마고치 냥이 상세 진입 클릭" 워크플로우에서 Set states 5개 = User 필드 스냅샷 (진입 시 1회)
+- cat-detail src가 이 상태들을 읽음 → 기록해도 src 안 바뀜 → 리로드 안 함 → didRun 연출 살아남
+- ⚠️ Step7 "Go to page 01_main"이 상태 초기화하면 폴백: Set states를 "Do when current_tab is My Cat" 이벤트로 이동
+
+### iframe URL 파라미터 (cat_detail)
+```
+?streak=[s_streak]&longest=[s_longest]&lifetime_km=[s_life]&today_km=[s_today]&week_km=[s_week]&onb=0&embed=1
+```
+- `onb=0`: 온보딩 자동표시 끔 / `embed=1`: iframe 내부 기록버튼 숨김(버블 버튼 씀)
+
+### 코드 주요 변경 (이번 세션)
+- localStorage 병합 **제거** → 버블(URL)이 단일 데이터소스 (다른 계정 테스트 시 이전값 잔류 버그 해결)
+- `levelForKm` NaN 가드 (`if(!(km>0))return 0`) — 데이터 누락 시 LV.5 오작동 방지
+- cat.html moodOf: normal→평온 매핑 (상세와 기분 일치)
+- 입력 시트 → 전체화면 패널화 (cat_detail 내부, 지금은 미사용 — embed=1로 숨김. cat_input.html이 실제 사용)
+- `didRun` 메시지 수신 → 밥먹기/진화 연출 재생 + 중복발사 가드(`_ranLock`)
+- 냥이 캐릭터 margin-top 음수 제거 (이름 텍스트 겹침 해결)
+
+### ✅ 작동 확인됨
+- 기록 → DailyRunningLog 저장 + 퀘스트/티켓 + 냥이 누적km 증가
+- 진화 애니메이션 재생 + 확인버튼 닫힘
+- 신규 유저 0부터 시작 / 요약카드↔상세 동기화
+
+### 🔴 미해결 (다음 세션 최우선)
+**냥이 상세(cat_detail) 세로 스크롤이 특정 해상도에서 안 먹힘.** 근본 원인 = 구조 충돌:
+- 콘텐츠가 길어서 스크롤 필요 + 진화/졸업 오버레이는 `position:fixed`라 "화면 기준"이어야 함
+- **iframe=100vh + 내부 스크롤**: 오버레이 OK, 근데 버블 박스가 화면보다 크면 페이지 스크롤과 충돌 → 특정 해상도 스크롤 먹통
+- **iframe=2100px + 페이지 스크롤**: 스크롤 OK, 근데 오버레이가 2100px 한가운데 떠서 화면 밖
+
+**추천 해결책 (다음 세션)**: 진화/졸업/토스트 오버레이를 **iframe 밖 버블 네이티브 Popup으로 분리** (cat_input처럼). 그럼 cat_detail은 순수 스크롤 콘텐츠(2100px 페이지스크롤)가 되어 스크롤 완벽, 오버레이는 버블이 처리. didRun에서 레벨업 감지 시 cat_detail이 `postMessage({action:'show_evo',...})` → 버블이 진화 Popup 표시. (진화 비주얼은 `cat_evo.html?from=&to=` 같은 작은 iframe을 Popup에 삽입)
+- 대안: 100vh 유지하되 My Cat 탭/페이지를 viewport 높이로 고정해 페이지 스크롤 자체를 없애기 (iframe 내부 스크롤만 남김). 단 버블에서 박스=viewport 맞추기가 까다로움.
+
+### ⏳ 미구현 (Phase 2)
+- **스트릭(연속일) 로직**: tamagotchi_last_run_date 기준 어제=+1 / 공백=1 / 오늘이미=유지, longest 갱신. 워크플로우 Step2에 조건부 Make changes 추가 필요.
+- 퇴화(가출) 푸시 알림, 캐릭터 스킨(티켓 수익화)
+
+---
+
 ## Bubble DB 구조 (2026-06-24 Data API로 직접 확인)
 
 ### API 접근 정보
