@@ -2483,6 +2483,52 @@ https://app.notion.com/p/387636bbf08a81899380d218c3d03d24
 
 ---
 
+## § 33-C: 다마고치 QA / 리버스 엔지니어링 개선사항 (2026-06-30 도출)
+
+> ⚠️ **작업 원칙 (대표님 지시)**: 앞으로 "버블에서 이거하라 저거하라"를 최소화한다. 가능한 건 **iframe 코드 + User 비정규화 필드**로 해결해서 버블 워크플로우/Search 추가를 줄인다(워크로드 폭탄 방지). 아래는 "지금 고치는 것"이 아니라 **개선 도출 목록**.
+
+### 🔴 A. 보안 — 클라이언트 입력 무검증 (가장 심각)
+- **현상**: 기록(거리)이 iframe `postMessage`(클라 입력) → JTB → 워크플로우로 그대로 저장되고, 그걸로 **퀘스트 티켓까지 지급**됨. 유저가 postMessage/JTB를 조작하면 **가짜 거리 무한 기록 → 티켓 무한 파밍** 가능. (CLAUDE.md §27 "티켓 지급은 webhook 검증" 원칙 위배)
+- **현상2**: 1일 1회 가드가 코드에서 주석처리(`cat_detail.html` openSheet `if(todayKm>0)return` 비활성) + 워크플로우에도 제한 없음 → **하루 무제한 기록** → lifetime 뻥튀기 + 티켓 파밍.
+- **개선 (코드+버블 최소)**:
+  - 워크플로우에 1일 1회 제한 조건: `Search DailyRunningLogs(user=Current User, date>=오늘):count is 0` 일 때만 티켓 지급(또는 기록). 이미 today 기록 있으면 추가기록은 가능하되 **티켓은 1일 1개만**.
+  - 거리 상한 검증(예: > 100km면 거부) — 워크플로우 Only when 조건 한 줄.
+  - 근본적으론 거리 입력 자체가 유저 자가신고라 100% 검증 불가 → 최소한 위 가드로 파밍만 막기.
+
+### 🟡 B. 버블 워크로드 / 성능
+- **today_km / week_km = `Search for DailyRunningLogs:sum`** 가 두 군데서 반복 실행:
+  - 홈 요약카드(cat.html) src → **매 홈페이지 로드마다** 2개 Search
+  - 상세 진입 상태 스냅샷 → 탭 진입마다 2개 Search
+  - 유저 1,125명 + 홈은 가장 자주 열리는 페이지 → 누적 쿼리 부담 큼
+- **개선 (비정규화)**: User에 `tamagotchi_today_km` / `tamagotchi_week_km` 필드 추가. 기록 시 워크플로우에서 갱신(+= 거리), 날짜/주 바뀌면 0으로 리셋(진입 시 last_run_date 비교로 판단). → **Search 0개**, 필드 읽기만. lifetime_km과 동일 패턴. 워크로드 대폭 절감 + 요약/상세 단일 소스(이중관리 해소).
+
+### 🟠 C. 기획 핵심 기능 미연결 (다마고치인데 다마고치가 안 됨)
+- **status(happy/sad/danger/runaway/egg) 완전 미연결**: src에 `status`/`last_run_date`를 안 넘김 → `STS=q.get('status')||'normal'` 라 냥이가 **영원히 normal/egg**. 즉 **"안 달리면 슬퍼지고 며칠 더 안 달리면 가출"이라는 다마고치 핵심 리텐션 훅이 죽어있음.** 하트(배고픔/행복)도 status 기반이라 항상 기본값.
+  - **개선 (코드로 해결 — 버블 부담 0)**: src에 `last_run_date`(epoch ms 또는 ISO) **하나만** 추가로 넘기면, iframe이 "며칠 안 달렸는지" 계산해서 happy/sad/danger/runaway/egg + 하트 + 스트릭까지 **전부 클라에서 계산** 가능. 버블 조건분기 불필요.
+- **스트릭(연속일) 미구현**: 위 last_run_date 넘기면 iframe이 표시까지 계산 가능. DB 저장이 필요하면 워크플로우 한 군데만.
+
+### 🟢 D. 코드로 옮겨 버블 부담 줄일 것 (= 너가 직접 할 수 있는 것)
+1. **status/streak/하트 계산을 iframe으로** (위 C) — `last_run_date` 1개만 넘기면 끝. 버블 워크플로우 조건 안 만들어도 됨.
+2. **today/week 비정규화 필드** (위 B) — Search 제거.
+3. **진화/졸업 오버레이 → 버블 Popup 분리** (§33-B 블로커) — cat_detail은 순수 스크롤, 연출은 Popup.
+4. **요약↔상세 동기화 단일화** — 비정규화 필드 쓰면 양쪽 src가 같은 필드만 읽어서 이중 Search 관리 사라짐.
+
+### ⚪ E. UX / 엣지케이스 / 정합성
+- **온보딩 영구 OFF**: 지금 `?onb=0`으로 꺼둬서 **아무도 온보딩 못 봄**. User 필드 `tamagotchi_onboarded`(yes/no)로 1회 노출 처리 미완(iframe은 `closeOnb` 시 `postMessage({action:'onboarded'})` 이미 보냄 — 버블에서 받아 저장만 하면 됨).
+- **didRun 후 상태 불일치**: 기록 후 states는 스냅샷(기록 전)이라, animateRun이 JS로 화면만 갱신. 탭에 계속 머물면 재진입 전까지 stats가 미세하게 안 맞을 수 있음("Just once"가 재진입 시 보정). 비정규화 필드 + postMessage 갱신으로 깔끔해짐.
+- **lifetime vs today/week 출처 불일치**: lifetime=User필드, today/week=Search → 정합성/타이밍 어긋날 여지. 비정규화로 통일 권장.
+- **졸업(200km↑) 새 캐릭터 도감**: `DEX` 이름 대부분 `'???'` (미디자인). 200km 넘는 유저 거의 없어 당장 무관하나 추후 디자인 필요.
+- **NaN/누락 방어**: `levelForKm` NaN 가드는 넣음. 다른 파라미터(streak 등)도 누락 시 0 처리 확인 권장.
+
+### 우선순위 (개선 착수 순서 제안)
+1. **§33-B 블로커**(스크롤+오버레이 분리) — 안 풀면 도돌이표
+2. **C. status/last_run_date 연결** — 다마고치 본질, 코드만으로 가능, 임팩트 큼
+3. **A. 보안**(1일 1회 + 거리상한) — 티켓 파밍 차단
+4. **B/D. 비정규화 + Search 제거** — 워크로드 절감
+5. **E. 온보딩/정합성** 마무리
+
+---
+
 ## Bubble DB 구조 (2026-06-24 Data API로 직접 확인)
 
 ### API 접근 정보
