@@ -25,6 +25,7 @@
 | 버전 | 날짜 | URL | 변경 요약 |
 |------|------|-----|----------|
 | v1 | 2026-06-24 | [/archive/marathon-plan_v1.html](https://weather-app-pied-theta.vercel.app/archive/marathon-plan_v1.html) | 빈상태/히어로카드/주간캘린더/전체플랜. 버블 미연동, marathon.js NaN 버그(≤2주) 미수정 상태의 스냅샷 |
+| v2 | 2026-07-01 | [/archive/marathon-plan_v2.html](https://weather-app-pied-theta.vercel.app/archive/marathon-plan_v2.html) | NRC 화이트 재설계 전 스냅샷 (다크테마 776줄 원본). Task 1 골격 작업 직전 아카이브. |
 
 ---
 
