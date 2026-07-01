@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>페이서스 — 오늘도 운동화를 다시 신는 이유</title>
+  <meta name="description" content="동네 러닝메이트를 찾아드립니다. 페이서스는 나와 가장 가까운 러너를 매일 정오 소개합니다.">
+  <meta property="og:title" content="페이서스 — 러닝메이트 매칭 플랫폼">
+  <meta property="og:description" content="혼자 달리지 마세요. 동네 페이서와 함께합니다.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Pretendard', '-apple-system', 'system-ui', 'sans-serif'] },
+          colors: { brand: { DEFAULT: '#3764F1', light: '#5A84FF', dark: '#1E44C8' } },
+        },
+      },
+    }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { background: #080808; color: #F0EEE8; font-family: 'Pretendard', system-ui, sans-serif; overflow-x: hidden; }
+    .kr { word-break: keep-all; }
+
+    /* Scroll progress */
+    #prog { position: fixed; top: 0; left: 0; height: 2px; background: linear-gradient(to right, #3764F1, #5A84FF); z-index: 200; width: 0%; transition: width 0.1s linear; }
+
+    /* Reveal */
+    .reveal { opacity: 0; transform: translateY(2.5rem); filter: blur(6px); transition: opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1), filter 0.9s cubic-bezier(0.16,1,0.3,1); }
+    .reveal.on { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+    /* Slide from left/right */
+    .slide-l { opacity: 0; transform: translateX(-3rem); filter: blur(4px); transition: all 0.9s cubic-bezier(0.16,1,0.3,1); }
+    .slide-r { opacity: 0; transform: translateX(3rem); filter: blur(4px); transition: all 0.9s cubic-bezier(0.16,1,0.3,1); }
+    .slide-l.on, .slide-r.on { opacity: 1; transform: translateX(0); filter: blur(0); }
+
+    /* Word reveal */
+    .words span { display: inline-block; opacity: 0; transform: translateY(1.2rem); filter: blur(8px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1), filter 0.7s cubic-bezier(0.16,1,0.3,1); }
+    .words.on span { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+    /* Glass */
+    .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.08); }
+
+    /* Bento card */
+    .bento { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 24px; transition: all 0.5s cubic-bezier(0.16,1,0.3,1); overflow: hidden; }
+    .bento:hover { background: rgba(255,255,255,0.045); border-color: rgba(55,100,241,0.25); transform: translateY(-3px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+
+    /* Icon ring */
+    .icon-ring { width: 46px; height: 46px; border-radius: 13px; background: rgba(55,100,241,0.1); border: 1px solid rgba(55,100,241,0.2); display: flex; align-items: center; justify-content: center; }
+
+    /* Gradient text */
+    .gt { background: linear-gradient(120deg, #F0EEE8 0%, #3764F1 55%, #7BA4FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* Eyebrow */
+    .eb { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 12px; font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase; font-weight: 500; background: rgba(55,100,241,0.1); color: #5A84FF; border: 1px solid rgba(55,100,241,0.2); }
+
+    /* CTA button */
+    .btn-primary { display: inline-flex; align-items: center; gap: 12px; background: #3764F1; color: #fff; font-weight: 600; padding: 18px 36px; border-radius: 999px; font-size: 16px; transition: all 0.5s cubic-bezier(0.16,1,0.3,1); }
+    .btn-primary:hover { transform: scale(1.025); box-shadow: 0 0 50px rgba(55,100,241,0.45); }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 12px; font-weight: 600; padding: 18px 36px; border-radius: 999px; font-size: 16px; transition: all 0.5s cubic-bezier(0.16,1,0.3,1); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #fff; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: rgba(55,100,241,0.3); transform: scale(1.02); }
+    .btn-secondary:active { transform: scale(0.97); }
+    .btn-icon { width: 36px; height: 36px; border-radius: 999px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* Marquee */
+    .mq-wrap { display: flex; overflow: hidden; }
+    .mq { display: flex; gap: 48px; animation: mq 18s linear infinite; flex-shrink: 0; }
+    @keyframes mq { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+    /* Counter */
+    .num { font-variant-numeric: tabular-nums; }
+
+    /* Orb */
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-18px); } }
+    @keyframes floatB { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(3deg); } }
+    .orb1 { animation: float 7s ease-in-out infinite; }
+    .orb2 { animation: floatB 10s ease-in-out infinite; animation-delay: -4s; }
+    .orb3 { animation: float 5s ease-in-out infinite; animation-delay: -2s; }
+
+    /* Track SVG */
+    .tp { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: draw 3s cubic-bezier(0.16,1,0.3,1) 0.3s forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+
+    /* Pulse */
+    @keyframes pulse { 0%,100%{opacity:1;r:5} 50%{opacity:0.5;r:8} }
+
+    /* Section divider */
+    .div-line { height: 1px; background: linear-gradient(to right, transparent, rgba(255,255,255,0.06), transparent); }
+
+    /* Number bg */
+    .step-num { font-size: 7rem; font-weight: 800; color: rgba(55,100,241,0.07); line-height: 1; margin-bottom: 1rem; font-variant-numeric: tabular-nums; }
+
+    /* Noise texture */
+    body::after { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 999; opacity: 0.35; }
+  </style>
+</head>
+<body>
+
+<!-- Scroll progress bar -->
+<div id="prog"></div>
+
+<!-- ===== NAVIGATION ===== -->
+<nav id="nav" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl">
+  <div id="nav-inner" class="glass rounded-full px-6 py-3.5 flex items-center justify-between transition-all duration-500">
+    <span class="font-bold text-lg tracking-[0.15em] text-white">PACERS</span>
+    <div class="hidden md:flex items-center gap-8 text-sm text-white/55">
+      <a href="#features" class="hover:text-white transition-colors duration-300 kr">기능</a>
+      <a href="#how" class="hover:text-white transition-colors duration-300 kr">이용방법</a>
+      <a href="#story" class="hover:text-white transition-colors duration-300 kr">후기</a>
+    </div>
+    <a href="#download" class="text-sm font-semibold px-5 py-2.5 rounded-full bg-brand text-white hover:bg-brand-light transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] kr">무료 시작하기</a>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="min-h-[100dvh] flex items-center relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+
+  <!-- Background: mesh gradient orbs -->
+  <div class="absolute inset-0 pointer-events-none overflow-hidden">
+    <div class="orb1 absolute top-[20%] left-[10%] w-[500px] h-[500px] rounded-full opacity-[0.14]" style="background:radial-gradient(circle,#3764F1 0%,transparent 70%);filter:blur(90px)"></div>
+    <div class="orb2 absolute top-[50%] right-[5%] w-[320px] h-[320px] rounded-full opacity-[0.08]" style="background:radial-gradient(circle,#5A84FF 0%,transparent 70%);filter:blur(70px)"></div>
+    <div class="orb3 absolute bottom-[10%] left-[30%] w-[240px] h-[240px] rounded-full opacity-[0.06]" style="background:radial-gradient(circle,#3764F1 0%,transparent 70%);filter:blur(60px)"></div>
+    <!-- dot grid -->
+    <svg class="absolute inset-0 w-full h-full opacity-[0.035]" xmlns="http://www.w3.org/2000/svg">
+      <defs><pattern id="g" x="0" y="0" width="36" height="36" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#fff"/></pattern></defs>
+      <rect width="100%" height="100%" fill="url(#g)"/>
+    </svg>
+  </div>
+
+  <div class="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-16 items-center relative z-10">
+
+    <!-- Left: Text -->
+    <div>
+      <div class="eb mb-8 reveal">
+        <iconify-icon icon="solar:running-linear"></iconify-icon>
+        국내 버블앱 19위 · 러닝메이트 플랫폼
+      </div>
+
+      <h1 class="text-[clamp(3rem,8vw,5.5rem)] font-bold kr leading-[1.1] tracking-tight mb-7 words" id="h1">
+        <span>오늘도</span><br>
+        <span>운동화를</span><br>
+        <span class="gt">다시</span>&nbsp;<span class="gt">신는</span><br>
+        <span>이유</span>
+      </h1>
+
+      <p class="text-lg text-white/50 kr leading-relaxed max-w-[440px] mb-10 reveal" style="transition-delay:.35s">
+        멀리, 빨리 뛰는 법보다 오늘도 달리는 법을 제안합니다.<br>내 동네 페이서를 찾아 함께 달리세요.
+      </p>
+
+      <div class="flex flex-wrap gap-4 mb-14 reveal" style="transition-delay:.55s">
+        <a href="#download" class="btn-primary">
+          <iconify-icon icon="solar:apple-linear" class="text-xl"></iconify-icon>
+          앱 다운로드
+          <span class="btn-icon"><iconify-icon icon="solar:arrow-right-linear"></iconify-icon></span>
+        </a>
+        <a href="#features" class="btn-secondary">
+          기능 살펴보기
+          <span class="btn-icon"><iconify-icon icon="solar:arrow-down-linear"></iconify-icon></span>
+        </a>
+      </div>
+
+      <!-- Mini stats -->
+      <div class="flex gap-8 pt-8 border-t border-white/[0.07] reveal" style="transition-delay:.75s">
+        <div>
+          <div class="text-2xl font-bold num" data-cnt="1125">0</div>
+          <div class="text-xs text-white/35 mt-0.5 kr">누적 러너</div>
+        </div>
+        <div class="w-px bg-white/[0.07]"></div>
+        <div>
+          <div class="text-2xl font-bold">19<span class="text-sm font-normal text-white/40">위</span></div>
+          <div class="text-xs text-white/35 mt-0.5 kr">버블앱 국내 순위</div>
+        </div>
+        <div class="w-px bg-white/[0.07]"></div>
+        <div>
+          <div class="text-2xl font-bold">12:00</div>
+          <div class="text-xs text-white/35 mt-0.5 kr">매일 페이서 갱신</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Track visual + floating cards -->
+    <div class="relative flex items-center justify-center orb1" style="animation-delay:-3s">
+      <svg viewBox="0 0 440 440" class="w-full max-w-[420px]" xmlns="http://www.w3.org/2000/svg">
+        <!-- Track rings -->
+        <ellipse cx="220" cy="220" rx="185" ry="130" fill="none" stroke="rgba(55,100,241,0.12)" stroke-width="1"/>
+        <ellipse cx="220" cy="220" rx="155" ry="100" fill="none" stroke="rgba(55,100,241,0.08)" stroke-width="1"/>
+        <ellipse cx="220" cy="220" rx="120" ry="68" fill="none" stroke="rgba(55,100,241,0.06)" stroke-width="1"/>
+        <!-- Animated main track -->
+        <ellipse cx="220" cy="220" rx="170" ry="116" fill="none" stroke="#3764F1" stroke-width="1.5" class="tp" stroke-linecap="round" opacity="0.7"/>
+        <!-- Runners moving -->
+        <circle r="6" fill="#3764F1">
+          <animateMotion dur="4s" repeatCount="indefinite" path="M 50 220 A 170 116 0 1 1 390 220 A 170 116 0 1 1 50 220"/>
+        </circle>
+        <circle r="4.5" fill="#5A84FF" opacity="0.65">
+          <animateMotion dur="6s" repeatCount="indefinite" begin="-2.5s" path="M 50 220 A 170 116 0 1 1 390 220 A 170 116 0 1 1 50 220"/>
+        </circle>
+        <circle r="3.5" fill="#7BA4FF" opacity="0.4">
+          <animateMotion dur="8s" repeatCount="indefinite" begin="-5s" path="M 50 220 A 170 116 0 1 1 390 220 A 170 116 0 1 1 50 220"/>
+        </circle>
+        <!-- Center -->
+        <circle cx="220" cy="220" r="44" fill="rgba(55,100,241,0.05)" stroke="rgba(55,100,241,0.18)" stroke-width="1"/>
+        <text x="220" y="215" text-anchor="middle" fill="#F0EEE8" font-size="11" font-family="Pretendard" font-weight="700" letter-spacing="3">PACERS</text>
+        <text x="220" y="232" text-anchor="middle" fill="rgba(240,238,232,0.35)" font-size="8" font-family="Pretendard" letter-spacing="1">러닝메이트</text>
+        <!-- Pulsing dot at center -->
+        <circle cx="220" cy="220" r="5" fill="#3764F1">
+          <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="5;9;5" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="220" cy="220" r="3.5" fill="#F0EEE8"/>
+        <!-- Distance tags -->
+        <text x="220" y="82" text-anchor="middle" fill="rgba(55,100,241,0.55)" font-size="9" font-family="Pretendard">1km</text>
+        <text x="220" y="358" text-anchor="middle" fill="rgba(55,100,241,0.35)" font-size="9" font-family="Pretendard">3km</text>
+        <text x="23" y="225" text-anchor="middle" fill="rgba(55,100,241,0.35)" font-size="9" font-family="Pretendard">5km</text>
+        <text x="416" y="225" text-anchor="middle" fill="rgba(55,100,241,0.35)" font-size="9" font-family="Pretendard">10km</text>
+      </svg>
+
+      <!-- Floating card: weather -->
+      <div class="absolute top-2 right-0 glass rounded-2xl px-4 py-3 orb3 shadow-xl" style="animation-delay:-1.5s">
+        <div class="text-[10px] text-white/40 mb-1 kr">오늘의 러닝 날씨</div>
+        <div class="text-sm font-semibold flex items-center gap-1.5">
+          <iconify-icon icon="solar:sun-2-bold" class="text-yellow-400"></iconify-icon>
+          러닝지수 <span class="text-brand">87</span><span class="text-white/40 font-normal">/100</span>
+        </div>
+      </div>
+
+      <!-- Floating card: pacer match -->
+      <div class="absolute bottom-6 left-0 glass rounded-2xl px-4 py-3 orb2 shadow-xl" style="animation-delay:-4s">
+        <div class="text-[10px] text-white/40 mb-1.5 kr">새 페이서 발견</div>
+        <div class="flex items-center gap-2.5">
+          <div class="flex -space-x-2">
+            <img src="https://i.pravatar.cc/36?u=hayun01" class="w-8 h-8 rounded-full border-2 border-brand/40" loading="lazy" alt="러너">
+            <img src="https://i.pravatar.cc/36?u=minjun02" class="w-8 h-8 rounded-full border-2 border-brand/40" loading="lazy" alt="러너">
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-white/85 kr">0.8km 이내</div>
+            <div class="text-[10px] text-brand">지금 매칭 가능</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating card: quest -->
+      <div class="absolute top-1/3 -left-4 glass rounded-2xl px-3 py-2.5 orb1 shadow-xl" style="animation-delay:-6s">
+        <div class="flex items-center gap-2">
+          <iconify-icon icon="solar:ticket-bold" class="text-brand text-base"></iconify-icon>
+          <div>
+            <div class="text-[10px] text-white/40 kr">퀘스트 완료</div>
+            <div class="text-xs font-semibold text-white/90 kr">+1 티켓 획득</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll hint -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-30 animate-bounce">
+    <iconify-icon icon="solar:alt-arrow-down-linear" class="text-white text-lg"></iconify-icon>
+  </div>
+</section>
+
+<!-- ===== MARQUEE ===== -->
+<div class="div-line"></div>
+<section class="py-8 overflow-hidden">
+  <div class="mq-wrap gap-12">
+    <div class="mq" aria-hidden="true">
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:running-linear" class="text-brand/40"></iconify-icon>동네 러닝메이트 매칭</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:cloud-sun-linear" class="text-brand/40"></iconify-icon>러닝 날씨 지수</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:medal-ribbon-linear" class="text-brand/40"></iconify-icon>마라톤 캘린더</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:users-group-rounded-linear" class="text-brand/40"></iconify-icon>데일리 크루</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:fire-linear" class="text-brand/40"></iconify-icon>오픈런 Beta</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:chat-round-dots-linear" class="text-brand/40"></iconify-icon>쿨다운 커뮤니티</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:heart-pulse-linear" class="text-brand/40"></iconify-icon>데일리 퀘스트</span>
+    </div>
+    <div class="mq" aria-hidden="true">
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:running-linear" class="text-brand/40"></iconify-icon>동네 러닝메이트 매칭</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:cloud-sun-linear" class="text-brand/40"></iconify-icon>러닝 날씨 지수</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:medal-ribbon-linear" class="text-brand/40"></iconify-icon>마라톤 캘린더</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:users-group-rounded-linear" class="text-brand/40"></iconify-icon>데일리 크루</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:fire-linear" class="text-brand/40"></iconify-icon>오픈런 Beta</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:chat-round-dots-linear" class="text-brand/40"></iconify-icon>쿨다운 커뮤니티</span>
+      <span class="flex items-center gap-3 text-white/22 text-sm font-medium whitespace-nowrap kr"><iconify-icon icon="solar:heart-pulse-linear" class="text-brand/40"></iconify-icon>데일리 퀘스트</span>
+    </div>
+  </div>
+</section>
+<div class="div-line"></div>
+
+<!-- ===== FEATURES BENTO ===== -->
+<section id="features" class="py-28 md:py-40 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto">
+    <div class="mb-18 md:mb-24 reveal">
+      <span class="eb mb-5">기능</span>
+      <h2 class="text-4xl md:text-[3.5rem] font-bold kr leading-tight mt-5">달리는 모든 순간을<br>함께합니다</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+
+      <!-- Daily Pacer - 4 cols -->
+      <div class="md:col-span-4 bento p-8 reveal">
+        <div class="icon-ring mb-6"><iconify-icon icon="solar:user-heart-rounded-linear" class="text-brand text-xl"></iconify-icon></div>
+        <div class="text-[10px] uppercase tracking-widest text-white/28 mb-2">Daily Pacer</div>
+        <h3 class="text-2xl font-bold kr mb-4 leading-snug">매일 정오,<br>동네 러너가 기다립니다</h3>
+        <p class="text-white/48 text-sm kr leading-relaxed mb-7">나이·페이스·위치 다차원 스코어링. 반경 10km 이내 러너 중 오늘 나와 가장 잘 맞는 페이서를 두 명 소개합니다. 거리 65%, 나이 15%, 성별 선호 20% 가중치로 동점자 없는 정밀 매칭.</p>
+        <div class="flex flex-wrap gap-2 mb-7">
+          <span class="text-xs glass px-3 py-1.5 rounded-full text-white/45 kr">거리 기반 65%</span>
+          <span class="text-xs glass px-3 py-1.5 rounded-full text-white/45 kr">나이차 반영</span>
+          <span class="text-xs glass px-3 py-1.5 rounded-full text-white/45 kr">매일 12시 갱신</span>
+          <span class="text-xs glass px-3 py-1.5 rounded-full text-white/45 kr">90일 활성 유저만</span>
+        </div>
+        <div class="rounded-2xl p-4 flex items-center gap-4" style="background:rgba(55,100,241,0.05);border:1px solid rgba(55,100,241,0.12)">
+          <div class="flex -space-x-2 flex-shrink-0">
+            <img src="https://i.pravatar.cc/44?u=hasu" class="w-11 h-11 rounded-full border-2 border-brand/30" loading="lazy" alt="페이서">
+            <img src="https://i.pravatar.cc/44?u=minju" class="w-11 h-11 rounded-full border-2 border-brand/30" loading="lazy" alt="페이서">
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-white/88 kr">오늘의 페이서 2명 대기 중</div>
+            <div class="text-xs text-brand mt-0.5 kr">0.8km · 2.3km 이내</div>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0 hover:bg-brand/35 transition-colors duration-300">
+            <iconify-icon icon="solar:arrow-right-linear" class="text-brand"></iconify-icon>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today Weather - 2 cols -->
+      <div class="md:col-span-2 bento p-8 reveal" style="transition-delay:.1s">
+        <div class="icon-ring mb-6"><iconify-icon icon="solar:cloud-sun-linear" class="text-brand text-xl"></iconify-icon></div>
+        <div class="text-[10px] uppercase tracking-widest text-white/28 mb-2">Today Weather</div>
+        <h3 class="text-xl font-bold kr mb-4 leading-snug">지금 뛸 수<br>있나요?</h3>
+        <p class="text-white/48 text-sm kr leading-relaxed mb-6">기온·습도·대기질(PM2.5) 종합 러닝지수. 지금 나가기 딱 좋은지 한눈에.</p>
+        <div class="text-center py-6 rounded-2xl" style="background:rgba(55,100,241,0.05);border:1px solid rgba(55,100,241,0.1)">
+          <div class="text-5xl font-bold text-brand num" data-cnt="87">0</div>
+          <div class="text-xs text-white/35 mt-1">/ 100 러닝지수</div>
+          <div class="text-xs text-white/55 mt-2 kr font-medium">지금 나가기 딱 좋아요</div>
+        </div>
+      </div>
+
+      <!-- Open Run - 2 cols -->
+      <div class="md:col-span-2 bento p-8 reveal" style="transition-delay:.15s">
+        <div class="icon-ring mb-6"><iconify-icon icon="solar:fire-linear" class="text-brand text-xl"></iconify-icon></div>
+        <div class="text-[10px] uppercase tracking-widest text-white/28 mb-2">오픈런</div>
+        <h3 class="text-xl font-bold kr mb-4 leading-snug">큐레이션<br>그룹런</h3>
+        <p class="text-white/48 text-sm kr leading-relaxed">매주 토요일, 전문 코스로 달립니다. 페이스별 그룹 신청 — 초보부터 엘리트까지.</p>
+        <div class="mt-5 inline-block text-xs glass px-3 py-1.5 rounded-full text-white/45">Beta 기간 무료</div>
+      </div>
+
+      <!-- Daily Quest - 2 cols -->
+      <div class="md:col-span-2 bento p-8 reveal" style="transition-delay:.2s">
+        <div class="icon-ring mb-6"><iconify-icon icon="solar:heart-pulse-linear" class="text-brand text-xl"></iconify-icon></div>
+        <div class="text-[10px] uppercase tracking-widest text-white/28 mb-2">데일리 퀘스트</div>
+        <h3 class="text-xl font-bold kr mb-4 leading-snug">달릴수록<br>보상이 쌓여요</h3>
+        <p class="text-white/48 text-sm kr leading-relaxed">러닝 기록 + 쿨다운 게시글 → 무료 티켓 1개. 매일 달리는 이유가 생깁니다.</p>
+        <div class="flex items-center gap-2 mt-5">
+          <div class="flex gap-1">
+            <div class="w-2.5 h-2.5 rounded-full bg-brand"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-brand/30"></div>
+          </div>
+          <span class="text-xs text-white/35 kr">오늘 1/2 완료</span>
+        </div>
+      </div>
+
+      <!-- Cooldown - 2 cols -->
+      <div class="md:col-span-2 bento p-8 reveal" style="transition-delay:.25s">
+        <div class="icon-ring mb-6"><iconify-icon icon="solar:chat-round-dots-linear" class="text-brand text-xl"></iconify-icon></div>
+        <div class="text-[10px] uppercase tracking-widest text-white/28 mb-2">쿨다운</div>
+        <h3 class="text-xl font-bold kr mb-4 leading-snug">달리고 나서<br>하는 이야기</h3>
+        <p class="text-white/48 text-sm kr leading-relaxed">러닝 후기, 고민, 자랑. 익명으로 솔직하게 나누는 러너 전용 커뮤니티.</p>
+      </div>
+
+      <!-- Marathon - full width -->
+      <div class="md:col-span-6 bento p-8 reveal" style="transition-delay:.3s">
+        <div class="grid md:grid-cols-5 gap-8 items-center">
+          <div class="md:col-span-2">
+            <div class="icon-ring mb-6"><iconify-icon icon="solar:medal-ribbon-linear" class="text-brand text-xl"></iconify-icon></div>
+            <div class="text-[10px] uppercase tracking-widest text-white/28 mb-2">마라톤 캘린더</div>
+            <h3 class="text-2xl font-bold kr mb-4 leading-snug">전국 대회 일정,<br>동행도 같이 찾으세요</h3>
+            <p class="text-white/48 text-sm kr leading-relaxed">접수중·접수전·마감 필터로 한눈에. 마라톤 동행 매칭까지 한 번에 해결합니다.</p>
+          </div>
+          <div class="md:col-span-3 grid grid-cols-3 gap-3">
+            <div class="bento p-4 text-center hover:border-brand/30">
+              <div class="text-xs text-white/28 mb-1.5">D-23</div>
+              <div class="text-sm font-semibold kr">서울마라톤</div>
+              <div class="text-xs text-brand mt-1.5 kr">풀코스</div>
+              <div class="text-[10px] text-white/28 mt-1 kr">접수 중</div>
+            </div>
+            <div class="bento p-4 text-center" style="border-color:rgba(55,100,241,0.3)">
+              <div class="text-xs text-white/28 mb-1.5">D-51</div>
+              <div class="text-sm font-semibold kr">인천마라톤</div>
+              <div class="text-xs text-brand mt-1.5 kr">하프</div>
+              <div class="text-[10px] text-white/28 mt-1 kr">접수 예정</div>
+            </div>
+            <div class="bento p-4 text-center hover:border-brand/30">
+              <div class="text-xs text-white/28 mb-1.5">D-89</div>
+              <div class="text-sm font-semibold kr">춘천마라톤</div>
+              <div class="text-xs text-brand mt-1.5 kr">풀코스</div>
+              <div class="text-[10px] text-white/28 mt-1 kr">접수 예정</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section id="how" class="py-28 md:py-40 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]">
+  <div class="max-w-7xl mx-auto">
+    <div class="mb-20 reveal">
+      <span class="eb mb-5">이용방법</span>
+      <h2 class="text-4xl md:text-[3.5rem] font-bold kr leading-tight mt-5">딱 3단계로<br>함께 달립니다</h2>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="grid md:grid-cols-2 gap-12 items-center mb-24">
+      <div class="slide-l">
+        <div class="step-num">01</div>
+        <div class="w-16 h-px bg-brand/35 mb-7"></div>
+        <h3 class="text-2xl font-bold kr mb-4 leading-snug">내 동네 페이서 발견</h3>
+        <p class="text-white/50 kr leading-relaxed">앱을 켜면 매일 정오, 내 반경 10km 이내 러너가 두 명 추천됩니다. 위치·나이·페이스·성별 선호를 종합한 스코어링으로 오늘 나와 가장 잘 맞는 사람이 먼저 옵니다.</p>
+      </div>
+      <div class="bento p-6 slide-r" style="transition-delay:.1s">
+        <div class="flex items-start gap-4 mb-5">
+          <img src="https://i.pravatar.cc/56?u=runnerA" class="w-14 h-14 rounded-2xl object-cover" loading="lazy" alt="페이서">
+          <div class="flex-1">
+            <div class="font-semibold text-sm kr mb-1">하윤서</div>
+            <div class="text-xs text-white/40 kr mb-2">27세 · 서울 강동구 · 5:20/km</div>
+            <div class="flex gap-1.5 flex-wrap">
+              <span class="text-[10px] glass px-2.5 py-1 rounded-full text-white/45 kr">0.8km 이내</span>
+              <span class="text-[10px] glass px-2.5 py-1 rounded-full text-white/45 kr">매칭 점수 94</span>
+            </div>
+          </div>
+        </div>
+        <div class="h-px bg-white/[0.06] mb-5"></div>
+        <div class="flex items-start gap-4">
+          <img src="https://i.pravatar.cc/56?u=runnerB" class="w-14 h-14 rounded-2xl object-cover" loading="lazy" alt="페이서">
+          <div class="flex-1">
+            <div class="font-semibold text-sm kr mb-1">박도현</div>
+            <div class="text-xs text-white/40 kr mb-2">30세 · 서울 강동구 · 5:45/km</div>
+            <div class="flex gap-1.5 flex-wrap">
+              <span class="text-[10px] glass px-2.5 py-1 rounded-full text-white/45 kr">2.3km 이내</span>
+              <span class="text-[10px] glass px-2.5 py-1 rounded-full text-white/45 kr">매칭 점수 87</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="grid md:grid-cols-2 gap-12 items-center mb-24">
+      <div class="bento p-6 slide-l order-2 md:order-1">
+        <div class="text-xs text-white/30 mb-4 kr">하윤서님의 첫인상은 어떤가요?</div>
+        <div class="grid grid-cols-3 gap-3">
+          <button class="bento p-4 text-center group" style="border-color:rgba(55,100,241,0.35)">
+            <div class="text-2xl mb-2">⚡</div>
+            <div class="text-xs text-brand font-medium kr">페이스 딱<br>맞겠다</div>
+          </button>
+          <button class="bento p-4 text-center group hover:border-brand/25">
+            <div class="text-2xl mb-2">🥇</div>
+            <div class="text-xs text-white/50 font-medium kr">진짜<br>러너다</div>
+          </button>
+          <button class="bento p-4 text-center group hover:border-brand/25">
+            <div class="text-2xl mb-2">🔥</div>
+            <div class="text-xs text-white/50 font-medium kr">꾸준함이<br>보여</div>
+          </button>
+        </div>
+        <div class="mt-4 text-xs text-white/28 text-center kr">티켓 소모 없음 · 가볍게 먼저 인사해보세요</div>
+      </div>
+      <div class="slide-r order-1 md:order-2" style="transition-delay:.1s">
+        <div class="step-num">02</div>
+        <div class="w-16 h-px bg-brand/35 mb-7"></div>
+        <h3 class="text-2xl font-bold kr mb-4 leading-snug">첫인상 보내기</h3>
+        <p class="text-white/50 kr leading-relaxed">티켓 없이 가볍게 시작하세요. 세 가지 첫인상 중 하나를 골라 전달하면, 상대도 나에게 첫인상을 보낼 수 있어요. 서로 보냈다면 "같이 달려볼까요?" 제안이 표시됩니다.</p>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="grid md:grid-cols-2 gap-12 items-center">
+      <div class="slide-l">
+        <div class="step-num">03</div>
+        <div class="w-16 h-px bg-brand/35 mb-7"></div>
+        <h3 class="text-2xl font-bold kr mb-4 leading-snug">같이 달리기</h3>
+        <p class="text-white/50 kr leading-relaxed">"같이 달려요" 버튼으로 매칭 신청. 수락되면 채팅방이 열리고 약속을 잡습니다. 혼자라면 멈췄을 그 순간, 옆에 페이서가 있으면 계속 달릴 수 있어요.</p>
+      </div>
+      <div class="bento p-6 slide-r" style="transition-delay:.1s">
+        <div class="flex items-center gap-3 mb-5">
+          <img src="https://i.pravatar.cc/40?u=runnerC" class="w-10 h-10 rounded-full" loading="lazy" alt="채팅">
+          <div>
+            <div class="text-sm font-semibold kr">하윤서</div>
+            <div class="text-xs text-white/35 kr">오늘 오전 7:23</div>
+          </div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="inline-block bento px-4 py-2.5 rounded-2xl rounded-tl-sm max-w-[85%]">
+            <span class="text-sm kr text-white/80">같이 달려요 수락했어요! 내일 7시 어때요?</span>
+          </div>
+          <div class="flex justify-end">
+            <div class="inline-block px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%]" style="background:rgba(55,100,241,0.25);border:1px solid rgba(55,100,241,0.25)">
+              <span class="text-sm kr text-white/90">좋아요! 우리 동네 공원 정문 앞에서 볼까요?</span>
+            </div>
+          </div>
+          <div class="inline-block bento px-4 py-2.5 rounded-2xl rounded-tl-sm max-w-[85%]">
+            <span class="text-sm kr text-white/80">완벽해요. 내일 봐요!</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STATS ===== -->
+<section class="py-20 border-y border-white/[0.05]" style="background:rgba(55,100,241,0.03)">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <div class="reveal">
+        <div class="text-4xl md:text-5xl font-bold text-white num" data-cnt="1125">0</div>
+        <div class="text-sm text-white/38 mt-2 kr">누적 러너</div>
+      </div>
+      <div class="reveal" style="transition-delay:.1s">
+        <div class="text-4xl md:text-5xl font-bold text-brand">37<span class="text-2xl">%</span></div>
+        <div class="text-sm text-white/38 mt-2 kr">30일 리텐션</div>
+      </div>
+      <div class="reveal" style="transition-delay:.2s">
+        <div class="text-4xl md:text-5xl font-bold text-white">4</div>
+        <div class="text-sm text-white/38 mt-2 kr">회/일 커뮤니티 글 자동 발행</div>
+      </div>
+      <div class="reveal" style="transition-delay:.3s">
+        <div class="text-4xl md:text-5xl font-bold text-white">19<span class="text-2xl text-white/40">위</span></div>
+        <div class="text-sm text-white/38 mt-2 kr">국내 버블앱 순위</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+<section id="story" class="py-28 md:py-40 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto">
+    <div class="mb-18 reveal">
+      <span class="eb mb-5">러너 후기</span>
+      <h2 class="text-4xl md:text-[3.5rem] font-bold kr leading-tight mt-5">함께 달린<br>러너들의 이야기</h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="bento p-7 reveal">
+        <div class="flex items-center gap-3 mb-6">
+          <img src="https://i.pravatar.cc/44?u=t1" class="w-11 h-11 rounded-full" loading="lazy" alt="하윤서">
+          <div>
+            <div class="font-semibold text-sm">하윤서</div>
+            <div class="text-xs text-white/35 kr">직장인 러너 · 서울 강동구</div>
+          </div>
+        </div>
+        <p class="text-sm text-white/65 kr leading-relaxed mb-5">"혼자 달리다가 페이서스 쓰고 나서 처음으로 하프마라톤 완주했어요. 같이 달릴 사람이 생기니까 포기를 안 하게 되더라고요."</p>
+        <div class="flex gap-0.5">
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+        </div>
+      </div>
+
+      <div class="bento p-7 reveal" style="transition-delay:.1s; border-color:rgba(55,100,241,0.22)">
+        <div class="flex items-center gap-3 mb-6">
+          <img src="https://i.pravatar.cc/44?u=t2" class="w-11 h-11 rounded-full" loading="lazy" alt="박도현">
+          <div>
+            <div class="font-semibold text-sm">박도현</div>
+            <div class="text-xs text-white/35 kr">초보 러너 · 서울 마포구</div>
+          </div>
+        </div>
+        <p class="text-sm text-white/65 kr leading-relaxed mb-5">"러닝 시작한 지 3개월 됐는데 페이서스로 동네 러너 만나고 나서 재미가 확 달라졌어요. 오늘의 날씨 지수도 진짜 유용하고요."</p>
+        <div class="flex gap-0.5">
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+        </div>
+      </div>
+
+      <div class="bento p-7 reveal" style="transition-delay:.2s">
+        <div class="flex items-center gap-3 mb-6">
+          <img src="https://i.pravatar.cc/44?u=t3" class="w-11 h-11 rounded-full" loading="lazy" alt="이서진">
+          <div>
+            <div class="font-semibold text-sm">이서진</div>
+            <div class="text-xs text-white/35 kr">마라토너 · 경기 성남시</div>
+          </div>
+        </div>
+        <p class="text-sm text-white/65 kr leading-relaxed mb-5">"오픈런으로 처음 그룹런 나가봤는데 코스가 너무 잘 짜여있고 페이스 그룹도 나뉘어 있어서 초보자도 전혀 부담 없어요."</p>
+        <div class="flex gap-0.5">
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+          <iconify-icon icon="solar:star-bold" class="text-yellow-400 text-xs"></iconify-icon>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section id="download" class="py-28 md:py-48 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+  <!-- ambient glow -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.12]" style="background:radial-gradient(circle,#3764F1 0%,transparent 65%);filter:blur(100px)"></div>
+  </div>
+
+  <div class="max-w-4xl mx-auto text-center relative z-10">
+    <span class="eb mb-8">무료 다운로드</span>
+    <h2 class="text-5xl md:text-7xl font-bold kr leading-tight mb-6 mt-8 words" id="cta-h">
+      <span>오늘</span> <span>동네</span><br>
+      <span>페이서를</span><br>
+      <span>찾아보세요</span>
+    </h2>
+    <p class="text-lg text-white/45 kr leading-relaxed mb-14 reveal" style="transition-delay:.3s">
+      외롭지 않습니다. 1,125명의 러너가 기다리고 있어요.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center reveal" style="transition-delay:.5s">
+      <a href="#" class="btn-primary">
+        <iconify-icon icon="solar:apple-linear" class="text-xl"></iconify-icon>
+        App Store
+        <span class="btn-icon"><iconify-icon icon="solar:arrow-right-linear"></iconify-icon></span>
+      </a>
+      <a href="#" class="btn-secondary">
+        <iconify-icon icon="solar:smartphone-2-linear" class="text-xl"></iconify-icon>
+        Google Play
+        <span class="btn-icon"><iconify-icon icon="solar:arrow-right-linear"></iconify-icon></span>
+      </a>
+    </div>
+
+    <!-- Decorative line -->
+    <div class="mt-20 relative">
+      <div class="h-px" style="background:linear-gradient(to right,transparent,rgba(55,100,241,0.5),transparent)"></div>
+      <div class="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brand"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="border-t border-white/[0.06] py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+    <div>
+      <span class="font-bold text-lg tracking-[0.15em] text-white">PACERS</span>
+      <p class="text-xs text-white/28 mt-1 kr">오늘도 운동화를 다시 신는 이유</p>
+    </div>
+    <div class="flex flex-wrap gap-6 text-sm text-white/35">
+      <a href="#" class="hover:text-white/70 transition-colors duration-300 kr">개인정보처리방침</a>
+      <a href="#" class="hover:text-white/70 transition-colors duration-300 kr">이용약관</a>
+      <a href="https://pacers.kr" class="hover:text-white/70 transition-colors duration-300">pacers.kr</a>
+      <a href="https://www.instagram.com/pacers_run" class="hover:text-white/70 transition-colors duration-300">Instagram</a>
+    </div>
+    <p class="text-xs text-white/18">© 2026 Pacers. All rights reserved.</p>
+  </div>
+</footer>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+  // Scroll progress bar
+  const prog = document.getElementById('prog');
+  window.addEventListener('scroll', () => {
+    const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+    prog.style.width = (p * 100) + '%';
+  }, { passive: true });
+
+  // Nav bg on scroll
+  const navInner = document.getElementById('nav-inner');
+  window.addEventListener('scroll', () => {
+    navInner.style.background = window.scrollY > 60
+      ? 'rgba(8,8,8,0.82)'
+      : 'rgba(255,255,255,0.04)';
+  }, { passive: true });
+
+  // Reveal on scroll
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('on'); });
+  }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+  document.querySelectorAll('.reveal, .slide-l, .slide-r').forEach(el => revealObs.observe(el));
+
+  // Word reveal
+  const wordObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('on');
+      e.target.querySelectorAll('span').forEach((s, i) => {
+        s.style.transitionDelay = (i * 90) + 'ms';
+      });
+    });
+  }, { threshold: 0.25 });
+  document.querySelectorAll('.words').forEach(el => wordObs.observe(el));
+
+  // Trigger hero on load
+  setTimeout(() => {
+    const h1 = document.getElementById('h1');
+    if (h1) {
+      h1.classList.add('on');
+      h1.querySelectorAll('span').forEach((s, i) => { s.style.transitionDelay = (200 + i * 90) + 'ms'; });
+    }
+    document.querySelectorAll('.reveal, .slide-l, .slide-r').forEach(el => {
+      if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('on');
+    });
+  }, 80);
+
+  // CTA word reveal on scroll
+  const ctaObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('on');
+      e.target.querySelectorAll('span').forEach((s, i) => {
+        s.style.transitionDelay = (i * 100) + 'ms';
+      });
+    });
+  }, { threshold: 0.3 });
+  const ctaH = document.getElementById('cta-h');
+  if (ctaH) ctaObs.observe(ctaH);
+
+  // Number counter
+  function runCounter(el) {
+    const target = parseInt(el.dataset.cnt);
+    const dur = 1600;
+    const t0 = performance.now();
+    const tick = (now) => {
+      const prog = Math.min((now - t0) / dur, 1);
+      const ease = 1 - Math.pow(1 - prog, 3);
+      el.textContent = Math.round(ease * target).toLocaleString('ko-KR');
+      if (prog < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  const cntObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !e.target._counted) {
+        e.target._counted = true;
+        runCounter(e.target);
+      }
+    });
+  }, { threshold: 0.6 });
+  document.querySelectorAll('[data-cnt]').forEach(el => cntObs.observe(el));
+</script>
+
+</body>
+</html>
