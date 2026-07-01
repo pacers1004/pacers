@@ -22,7 +22,7 @@
 | 04 | 자동 모니터링 & Slack 알림 | `~/weather-app` | `pacers1004/weather-app` | Vercel + cron-job.org | ✅ 라이브 |
 | 05 | Daily Pacer 첫인상 보내기 | 버블 전용 (Vercel 불필요) | — | Bubble 내 구현 | ✅ 라이브 (2026-06-20) |
 | 06 | 마라톤 훈련 플랜 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ⚠️ 미완성 (UI 구현, 버블 연동 미완) — **7월 목표** |
-| 07 | 페이서 다마고치 | `~/weather-app` | `pacers1004/weather-app` | Vercel | 🔜 개발 예정 — **7월 목표** |
+| 07 | 페이서 다마고치 | `~/weather-app` | `pacers1004/weather-app` | Vercel | ⚠️ 개발 중 (3탭UI+랭킹+마이탭 완성, 오버레이 분리 블로커) — **7월 목표** |
 | 08 | 구독 모델 (BDK) | 버블 전용 | — | Bubble + RevenueCat | 🔜 개발 예정 — **7월말~8월초 목표** |
 
 ### 네이밍 컨벤션
@@ -2384,9 +2384,9 @@ https://app.notion.com/p/387636bbf08a81899380d218c3d03d24
 
 ---
 
-## § 33-B: 다마고치 구현 현황 (2026-06-30) — ⚠️ 다음 세션 인계용
+## § 33-B: 다마고치 구현 현황 (2026-07-01 업데이트) — ⚠️ 다음 세션 인계용
 
-> 거의 완성. **남은 핵심 버그 1개: 냥이 상세 세로 스크롤이 특정 해상도에서 안 먹힘.** 아래 "미해결" 참고.
+> 3탭 UI + 랭킹 + 마이 탭 + 랭킹→유저카드 연결까지 완성. **블로커: 스크롤+오버레이 구조 충돌** (§33-B 하단 참고). 다음 세션 첫 작업 = 오버레이 분리.
 
 ### 파일 (weather-app, 모두 라이브 배포됨)
 | 파일 | 역할 |
@@ -2683,4 +2683,85 @@ https://app.notion.com/p/387636bbf08a81899380d218c3d03d24
 3. **구독 모델** — LTV 개선, 광고 의존도 감소 (§31 참고)
 
 > 5~6월 코호트(37~77%)가 이탈 결정하기 전에 7월 안에 나와야 타이밍 맞음.
+
+---
+
+## § 35: 다마고치 UI 전면 개편 (2026-07-01) — 세션 인계
+
+### ✅ 이번 세션 완료
+
+**cat.html (홈 요약카드) — NRC 위젯 스타일 리디자인**
+- 좌측: 누적 km hero(Anton 폰트 skewX -7deg) + LV 블루 pill 뱃지 + 파란 XP바
+- 우측: 냥이 SVG 캐릭터 (76px 고정 컬럼)
+- 하단: `오늘 X · 이번주 Y · 🔥Z일` 미니 스탯 한 줄
+- 높이 220px → 170px 압축 (날씨위젯과 동일 라인)
+
+**cat_detail.html (냥이 상세) — 3탭 + 마이탭 + 랭킹 전체 구현**
+
+**3탭 네비게이션 (내 냥이 / 랭킹 / 마이)**
+- 프로스티드 글라스 컨테이너 (backdrop-filter:blur(14px))
+- 흰 pill 슬라이딩 인디케이터 + 파란 glow (`box-shadow:0 3px 18px rgba(55,100,241,.45)`)
+- `switchTab()`: 인디케이터 translateX(N×100%) + 탭 콘텐츠 tabIn 애니메이션 (cubic-bezier)
+
+**마이 탭 (tabMy)**
+- LV 실드 SVG (Anton + 실드 path, 점 없음 — 클린)
+- 뱃지 그리드 4열 원형 셀 (획득=블루 glow + radial gradient, 미획득=dim)
+- 획득 뱃지 stagger pop 애니메이션 (`badgePop` 0.5s cubic)
+- 개인기록: count-up 애니메이션 + rAF 스로틀 대비 setTimeout 최종값 보장
+- 도감 바텀시트: pointer-events:none/auto 전환 (display:none 쓰면 transition 첫 프레임 짤림)
+  - `void el.offsetWidth` reflow로 CSS transition 강제 리셋 후 `.on` 클래스 추가
+
+**랭킹 탭 (tabRanking)**
+- `/api/ranking` — lifetime/today/week/mystats 4종 (최대 100위)
+- `fallbackPhoto(id)`: 유저 id hash → r01~r12 결정론적 배정 (깜빡임 없음)
+- 내 순위 hero + 다음 등수까지 km 표시
+- 랭킹 행 클릭 → `openUser(id)` → postMessage `{action:'open_user', id}` → Bubble 이동
+
+**랭킹 → 유저카드 연결 (버블 배선 완료)**
+- 버블 HTML 다마고치_페이지 다리 스크립트에 `open_user` 핸들러 추가:
+  ```js
+  if(e.data && e.data.action==='open_user' && e.data.id)
+    bubble_fn_openUser({output1:e.data.id});
+  ```
+- `JavascripttoBubble openUser` 엘리먼트: suffix=openUser, **Trigger event=ON** (이게 꺼져있으면 이동 안 됨 — 핵심)
+- 워크플로우: Go to page 01_main, user_id=output1, tab=daily_card
+- `01_Daily_Card_tab` 데이터소스: `Get user_id from page URL` → Daily Pacer 카드 표시
+
+**api/ranking.js 신규 생성 (Vercel 배포됨)**
+- `type=lifetime`: User.tamagotchi_lifetime_km 정렬
+- `type=today/week`: DailyRunningLog 날짜 필터 → 유저별 합산 → 닉네임/사진 조인
+- `type=mystats`: 내 전체 로그 집계 (totalRuns, longestRun, totalKm, bestPaceSec)
+- `Cache-Control: no-store` (항상 신선)
+- `BUBBLE_BASE`: version-test (현재 개발 중. 라이브 전환 시 `version-test/api/1.1/obj` → `api/1.1/obj` 교체)
+
+**.vercelignore (현재 상태)**
+```
+api/monitor-test.js
+api/seed-photos.js
+api/simulate-cooldown.js
+api/marathon.js
+```
+ranking.js, photo.js 는 **반드시 포함** (이전 세션에서 잘못 제외해 404 났던 전례 있음)
+
+**진단용 토스트 제거 (2026-07-01)**
+- `openUser()` 함수에 있던 "프로필 여는 중…" 토스트 제거 완료
+- 배포 전 `git push origin main` 필요
+
+### 🔴 다음 세션 첫 작업 (우선순위 1위)
+
+**블로커: 스크롤 + 오버레이 구조 분리 (§33-B "최우선 블로커" 상세 참고)**
+
+해결책 요약:
+1. `cat_detail.html` = 2100px 페이지스크롤 (in-iframe 오버레이 코드 전부 제거)
+2. `cat_evo.html` 신규 생성 (진화 비주얼 전용 작은 iframe)
+3. `didRun` → 레벨업 시 `show_evo` postMessage → 버블 다리가 "진화 Popup" Show
+4. "확인" = 버블 네이티브 버튼 → 어떤 해상도든 무조건 닫힘
+
+### ⏳ 다음 세션 TODO (순서)
+1. 🔴 스크롤+오버레이 분리 (cat_evo.html + 버블 Popup)
+2. 🟠 status/last_run_date 연결 — src에 `last_run_date=` 1개 추가, iframe이 클라에서 계산 (§33-C-C)
+3. 🟡 내 순위 버그: iframe src에 `&me=[Current User's unique id]` 추가 (대표님 버블 작업)
+4. 🟡 보안: 워크플로우 1일 1회 티켓 가드 + 거리 상한 (§33-C-A)
+5. 🟢 api/ranking.js BUBBLE_BASE를 live로 전환 (라이브 배포 직전)
+6. ⚪ 파이프라인 §07 상태를 "🔜" → "⚠️ 진행 중"으로 업데이트
 
