@@ -63,3 +63,80 @@
 weather-app stat 태그를 빨강/흰색/파랑 3색 → 블루 단색으로 통일.
 이유: 점수 색(동적 컬러)이 이미 전체 심각도를 전달하므로 태그에 추가 색이 불필요했음.
 결과: 색 어지러움 해소, 시선 위계 명확해짐.
+
+---
+
+## 마라톤 플랜 미니앱 디자인 (DESIGN-nike.md 참조 반영, 2026-07-01)
+
+Nike/NRC 캠페인 타일 원칙을 러닝 앱에 적용한 기준.
+
+### 스플래시 화면 (campaign-tile 원칙)
+
+Nike 기준: `display-campaign` — 96px / weight 500 / line-height 0.9 / uppercase.  
+모바일(375px 기준): 60–72px로 다운스케일. letter-spacing `-0.04em` 이하.
+
+**페이서스 스플래시 적용 스펙:**
+
+```
+[풀블리드 러닝 사진 — 페이서스 사진 폴더 정적 파일, R2 랜덤 금지]
+[다크 오버레이: linear-gradient 상단 0.3 → 하단 0.85]
+
+레이아웃 (좌하단 앵커, NRC/Nike 캠페인 타일 동일):
+  ┌─────────────────────────────┐
+  │                             │ ← 상단 여백
+  │                             │
+  │                             │
+  │  PACERS         ← 브랜드 hero │
+  │  font: 900 italic            │
+  │  size: clamp(3.8rem, 19vw, 7rem) │
+  │  line-height: 0.9            │
+  │  letter-spacing: -0.04em     │
+  │  color: #fff                 │
+  │                             │
+  │  마라톤 훈련 플랜  ← 서브라벨  │
+  │  font-size: 0.9rem           │
+  │  weight: 600                 │
+  │  color: rgba(255,255,255,0.7)│
+  │  letter-spacing: 0.12em      │
+  │                             │
+  │  나 자신을        ← 태그라인  │
+  │  뛰어넘다                    │
+  │  font-size: clamp(1.3rem, 5.5vw, 1.8rem) │
+  │  weight: 800                 │
+  │  color: #fff                 │
+  │  line-height: 1.25           │
+  │                             │
+  │  [시작하기 버튼]  ← 최하단   │
+  │  background: #fff, color: #111 │
+  │  border-radius: 9999px (pill) │
+  │  padding: 16px 24px, height: 52px │
+  └─────────────────────────────┘
+```
+
+**핵심 규칙:**
+- 브랜드명(PACERS)이 화면을 압도하는 유일한 타이포 — 다른 텍스트는 크기를 작게 유지
+- `clamp(3.8rem, 19vw, 7rem)` → 375px 기준 71px → "PACERS" 6글자 × ~47px = 282px, padding 48px 제외 327px 안에 들어옴
+- `overflow: hidden` 절대 금지 — italic 기울기 오른쪽 빈 공간 클리핑 방지
+- 사진: 정적 파일(`/images/splash.jpg`) 고정, 매번 랜덤 변환 금지
+- 사진 스타일: 컬러 그대로 + 다크 그라디언트 오버레이 (NRC 방식). grayscale filter X.
+- 버튼: pill 형태(`border-radius: 9999px`), 흰 배경 + 검정 텍스트 (Nike `button-outline-on-image` 패턴)
+
+### 대시보드 섹션 사진 헤더
+
+```
+오늘 탭 상단 사진 헤더:
+- height: 200px, object-fit: cover
+- 다크 오버레이 (하단 60% → rgba(0,0,0,0.6))
+- 러닝 사진만 사용 (페이서스 사진 폴더, r01~r12.jpg 또는 running-bw.jpg)
+- filter: grayscale(1) brightness(0.85) contrast(1.1) — 대시보드 헤더만 적용
+```
+
+### 숫자 위계 원칙 (NRC Apple Watch 원칙)
+
+```
+D-day 숫자: font-size 4rem+, weight 900, #111 (다크 배경 없을 때)
+훈련 km: font-size 3rem+, weight 900
+라벨: font-size 0.65–0.75rem, color #999, weight 700, uppercase
+```
+
+숫자가 디자인이다. 라벨은 숫자 아래에 아주 작게.
