@@ -66,77 +66,109 @@ weather-app stat 태그를 빨강/흰색/파랑 3색 → 블루 단색으로 통
 
 ---
 
-## 마라톤 플랜 미니앱 디자인 (DESIGN-nike.md 참조 반영, 2026-07-01)
+## 마라톤 플랜 미니앱 디자인 (2026-07-01, DESIGN_SYSTEM.md 기반)
 
-Nike/NRC 캠페인 타일 원칙을 러닝 앱에 적용한 기준.
-
-### 스플래시 화면 (campaign-tile 원칙)
-
-Nike 기준: `display-campaign` — 96px / weight 500 / line-height 0.9 / uppercase.  
-모바일(375px 기준): 60–72px로 다운스케일. letter-spacing `-0.04em` 이하.
-
-**페이서스 스플래시 적용 스펙:**
+### 색상 — 다크 모드 (DESIGN_SYSTEM.md §2 다크 모드)
 
 ```
-[풀블리드 러닝 사진 — 페이서스 사진 폴더 정적 파일, R2 랜덤 금지]
-[다크 오버레이: linear-gradient 상단 0.3 → 하단 0.85]
+Background:      #000000
+Surface:         #111111
+Text Primary:    #FFFFFF
+Text Secondary:  rgba(255,255,255,0.60)
+Text Tertiary:   rgba(255,255,255,0.36)
+Border:          rgba(255,255,255,0.10)
+Pacers Blue:     #3764F1  ← 최대 2곳만
+```
 
-레이아웃 (좌하단 앵커, NRC/Nike 캠페인 타일 동일):
+### 타이포그래피 토큰 (DESIGN_SYSTEM.md §3 적용)
+
+| 용도 | 크기 | 굵기 | tracking |
+|------|------|------|----------|
+| D-day 숫자 hero | 60px+ / `clamp(3.5rem, 16vw, 5rem)` | 900 | -0.03em |
+| 훈련 km hero | 48px / `3rem` | 900 | -0.03em |
+| PACERS 스플래시 | `clamp(3.8rem, 19vw, 7rem)` italic | 900 | -0.04em |
+| Headline | 28px | 700 | -0.01em |
+| Label (라벨) | 0.65–0.75rem | 700 | 0.08em uppercase |
+| Caption | 12px | 500 | 0.08em uppercase |
+
+**원칙**: 숫자가 디자인이다. 라벨은 숫자 아래 아주 작게. 절대 라벨에 컬러 강조 없음.
+
+### 스플래시 화면 (NRC campaign-tile 원칙)
+
+```
+[풀블리드 컬러 러닝 사진 — /images/splash.jpg 정적 파일, R2 랜덤 금지]
+[다크 오버레이: linear-gradient 상단 rgba(0,0,0,0.35) → 하단 rgba(0,0,0,0.85)]
+
+레이아웃 (justify-content: space-between):
   ┌─────────────────────────────┐
-  │                             │ ← 상단 여백
+  │  (사진이 배경 전체를 채움)   │
   │                             │
-  │                             │
-  │  PACERS         ← 브랜드 hero │
-  │  font: 900 italic            │
-  │  size: clamp(3.8rem, 19vw, 7rem) │
-  │  line-height: 0.9            │
-  │  letter-spacing: -0.04em     │
-  │  color: #fff                 │
-  │                             │
-  │  마라톤 훈련 플랜  ← 서브라벨  │
-  │  font-size: 0.9rem           │
-  │  weight: 600                 │
-  │  color: rgba(255,255,255,0.7)│
-  │  letter-spacing: 0.12em      │
-  │                             │
-  │  나 자신을        ← 태그라인  │
+  │  ← center-left 앵커         │
+  │  PACERS                     │  ← hero: clamp(3.8rem, 19vw, 7rem), italic, 900
+  │  마라톤 훈련 플랜           │  ← sub: 0.9rem, 600, rgba(255,255,255,0.7), 0.12em
+  │  나 자신을                   │  ← tagline: clamp(1.3rem, 5.5vw, 1.8rem), 800
   │  뛰어넘다                    │
-  │  font-size: clamp(1.3rem, 5.5vw, 1.8rem) │
-  │  weight: 800                 │
-  │  color: #fff                 │
-  │  line-height: 1.25           │
   │                             │
-  │  [시작하기 버튼]  ← 최하단   │
-  │  background: #fff, color: #111 │
-  │  border-radius: 9999px (pill) │
-  │  padding: 16px 24px, height: 52px │
+  │  [시작하기]                  │  ← pill button: #fff bg + #111 text + border-radius:9999px
   └─────────────────────────────┘
 ```
 
-**핵심 규칙:**
-- 브랜드명(PACERS)이 화면을 압도하는 유일한 타이포 — 다른 텍스트는 크기를 작게 유지
-- `clamp(3.8rem, 19vw, 7rem)` → 375px 기준 71px → "PACERS" 6글자 × ~47px = 282px, padding 48px 제외 327px 안에 들어옴
-- `overflow: hidden` 절대 금지 — italic 기울기 오른쪽 빈 공간 클리핑 방지
-- 사진: 정적 파일(`/images/splash.jpg`) 고정, 매번 랜덤 변환 금지
-- 사진 스타일: 컬러 그대로 + 다크 그라디언트 오버레이 (NRC 방식). grayscale filter X.
-- 버튼: pill 형태(`border-radius: 9999px`), 흰 배경 + 검정 텍스트 (Nike `button-outline-on-image` 패턴)
+**금지**: italic으로 overflow 발생 → `overflow: hidden` 절대 금지. `white-space: nowrap` 사용.
 
-### 대시보드 섹션 사진 헤더
+### 대시보드 탭 구조 (3탭)
 
 ```
-오늘 탭 상단 사진 헤더:
-- height: 200px, object-fit: cover
-- 다크 오버레이 (하단 60% → rgba(0,0,0,0.6))
-- 러닝 사진만 사용 (페이서스 사진 폴더, r01~r12.jpg 또는 running-bw.jpg)
-- filter: grayscale(1) brightness(0.85) contrast(1.1) — 대시보드 헤더만 적용
+[ 오늘 ] | [ 전체 플랜 ] | [ 마이 ]
+          ↑ 다크 pill 하단 플로팅 네비
 ```
 
-### 숫자 위계 원칙 (NRC Apple Watch 원칙)
+### 오늘 탭 — 섹션 구조
+
+1. 풀블리드 사진 헤더 (200px, `/images/running-bw.jpg`, 흑백)
+2. D-day hero 숫자 (`clamp(3.5rem, 16vw, 5rem)`, 900, white, `-0.03em`)
+3. 플랜 요약 한 줄 (14px, rgba(255,255,255,0.6))
+4. 오늘 훈련 카드 (km hero 48px, 라벨 12px uppercase)
+5. 이번 주 캘린더 (완료 ✓, 오늘 원형 테두리, 예정 점)
+6. 훈련 완료 버튼 (pill, #fff bg, 56px)
+
+### 버튼 규격 (DESIGN_SYSTEM.md §5)
+
+| 종류 | 배경 | 텍스트 | 높이 | radius |
+|------|------|--------|------|--------|
+| Primary (다크 화면) | #FFFFFF | #111 | 56px | 28px (또는 9999px pill) |
+| Ghost | transparent | white | 56px | 28px |
+
+탭 피드백: `scale 0.96, 150ms, cubic-bezier(0.34, 1.56, 0.64, 1)` (Snappy)
+
+### 모션 (DESIGN_SYSTEM.md §4 적용)
+
+```css
+--ease-spring:   cubic-bezier(0.16, 1, 0.3, 1);    /* 기본 진입 */
+--ease-snappy:   cubic-bezier(0.34, 1.56, 0.64, 1); /* 버튼 탭 */
+--ease-decel:    cubic-bezier(0, 0, 0.2, 1);         /* 바텀시트 */
+```
+
+- 카드 진입: `translateY(32px)→0, opacity 0→1, 400ms spring`
+- Stagger: 아이템 70ms 간격 (최대 5개)
+- D-day 숫자: count-up 800ms decelerate
+- 스플래시 텍스트 stagger: brand 150ms → sub 350ms → tagline 500ms → btn 750ms
+- 로딩: Skeleton shimmer (spinner 절대 금지)
+
+### 카드 규격 (다크)
+
+```css
+background: #111111;
+border: 1px solid rgba(255,255,255,0.10);
+border-radius: 16px;
+padding: 20px;
+/* box-shadow 절대 금지 */
+```
+
+### 레이아웃
 
 ```
-D-day 숫자: font-size 4rem+, weight 900, #111 (다크 배경 없을 때)
-훈련 km: font-size 3rem+, weight 900
-라벨: font-size 0.65–0.75rem, color #999, weight 700, uppercase
+좌우 여백: 24px
+섹션 상하 간격: 40px
+카드 간격: 12px
+하단 네비 높이: 64px + safe-area
 ```
-
-숫자가 디자인이다. 라벨은 숫자 아래에 아주 작게.
